@@ -3,8 +3,7 @@
 //  archervszombie
 //
 //  Created by LitQoo on 13. 2. 14..
-//
-//
+//JHGJHG//
 
 #include "GraphDog.h"
 
