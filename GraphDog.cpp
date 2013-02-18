@@ -4,6 +4,7 @@
 //
 //  Created by LitQoo on 13. 2. 14..
 //JHGJHG//
+// fuck litqoo
 
 #include "GraphDog.h"
 
