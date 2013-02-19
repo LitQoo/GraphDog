@@ -504,7 +504,7 @@ std::string gdkeyEnc(const std::string& msg,string key)
 	return base64_encode(&desed[0], desed.size());
 }
 
-std::string GDCreateToken(string auID,string udid,string flag,string nick,string email,string cTime,string secretKey){
+std::string GDCreateToken(string auID,string udid,string flag,string nick,string email,string platform,string cTime,string secretKey){
     string msg = auID;
     msg.append("||");
     msg.append(udid);
@@ -515,7 +515,10 @@ std::string GDCreateToken(string auID,string udid,string flag,string nick,string
     msg.append("||");
     msg.append(email);
     msg.append("||");
+    msg.append(platform);
+    msg.append("||");
     msg.append(cTime);
+    msg.append("||");
     
     vector<char> desed = des_enc(secretKey, msg);
 	return base64_encode(&desed[0], desed.size());
@@ -523,6 +526,7 @@ std::string GDCreateToken(string auID,string udid,string flag,string nick,string
 
 std::string getDeviceID() {
     string _id;
+    
     #if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
     char* macAddress=(char*)malloc(18);
         std::string ifName="en0";

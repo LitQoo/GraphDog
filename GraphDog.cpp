@@ -50,14 +50,23 @@ void GraphDog::setEmail(string email){
 string GraphDog::getEmail(){
     return CCUserDefault::sharedUserDefault()->getStringForKey("GD_EMAIL");
 }
-
+string GraphDog::getPlatform(){
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+        return "ios";
+#elif CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
+        return "android"
+#else
+        return "null";
+#endif
+}
 void GraphDog::setToken(string cTime){
     string udid=getUdid();
     string auid=getAuID();
     string email=getEmail();
     string nick=getNick();
     string flag=getFlag();
-    string token=GraphDogLib::GDCreateToken(auid, udid,flag,nick,email,cTime,sKey);
+    string flatform=getPlatform();
+    string token=GraphDogLib::GDCreateToken(auid, udid,flag,nick,email,flatform,cTime,sKey);
     CCUserDefault::sharedUserDefault()->setStringForKey("GD_TOKEN", token);
     CCUserDefault::sharedUserDefault()->flush();
 }
@@ -88,17 +97,14 @@ CURL* GraphDog::getCURL(){
     return curl_handle;
 }
 
-void GraphDog::start(string appID,string secretKey,string deviceId,CCObject *target,GDSelType selector){
+void GraphDog::start(string appID,string secretKey,string deviceId,JsonBox::Object *param,CCObject *target,GDSelType selector){
     this->setup(appID,secretKey);
     this->setUdid(deviceId);
-    
-    
-    
-    
+
     JsonBox::Object abc;
     JsonBox::Array ary;
     
-    this->command("start", NULL, target, selector);
+    this->command("start", param, target, selector);
 }
 
 void GraphDog::command(string action,JsonBox::Object *param,CCObject *target,GDSelType selector){
@@ -203,7 +209,7 @@ void GraphDog::completeCommand(){
     }
     
     
-    if(command.target!=0 && command.selector!=0)((command.target)->*(command.selector))(result);
+    if(command.target!=0 && command.selector!=0)((command.target)->*(command.selector))(resultobj);
     GDDelegator::getInstance()->removeCommand();
     if(gdchunk.memory)free(gdchunk.memory);
     

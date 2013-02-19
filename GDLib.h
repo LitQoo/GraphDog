@@ -50,14 +50,14 @@ std::string base64_decode(std::string const& encoded_string);
 std::string gdkeyEnc(const std::string& msg,string key);
 
 
-std::string GDCreateToken(string auID,string udid,string flag,string nick,string email,string cTime,string secretKey);
+std::string GDCreateToken(string auID,string udid,string flag,string nick,string email,string platform,string cTime,string secretKey);
 std::string getDeviceID();
 }
 
 #pragma once
 using namespace cocos2d;
 using namespace std;
-typedef void (CCObject::*GDSelType)(JsonBox::Value);
+typedef void (CCObject::*GDSelType)(JsonBox::Object);
 #define gd_selector(_SELECTOR) (GDSelType)(&_SELECTOR)
 class GDDelegator
 {
