@@ -128,7 +128,10 @@ void GraphDog::command(string action,JsonBox::Object *param,CCObject *target,GDS
     }
     
     token=getToken();
-    
+    if(token==""){
+        setToken("");
+        token=getToken();
+    }
     CCString *url = CCString::createWithFormat("action=%s&aID=%s&param=%s&token=%s",action.c_str(),aID.c_str(),paramStr.c_str(),token.c_str());
     
     CCLog("command url : %s",url->getCString());
@@ -160,7 +163,7 @@ void* GraphDog::t_function(void *data)
     while (1) {
         GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
         CURL *handle = GraphDog::get()->getCURL();
-        curl_easy_setopt(handle, CURLOPT_URL, "http://graphdog.net/cmd.php");
+        curl_easy_setopt(handle, CURLOPT_URL, "http://graphdog.com/cmd/");
         curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
         curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, true);
         curl_easy_setopt(handle, CURLOPT_POST, true);

@@ -31,7 +31,7 @@ public:
     
     
     
-    //서버연결 후 인증, 이작업이 무사이 완료되어야 다른작업이 가능함.
+    //서버연결 후 인증, 이작업이 무사히 완료되어야 다른작업이 가능함.
     void start(string appID,string secretKey,string deviceId,JsonBox::Object *param,CCObject *target,GDSelType selector);
     //명령날리기
     void command(string action,JsonBox::Object *param,CCObject *target,GDSelType selector);
