@@ -562,7 +562,10 @@ std::string getDeviceID() {
             freeifaddrs(addrs);
         }
     _id = macAddress;
-    #endif
+    #else
+    
+    _id="androiddevice";
+#endif
     //string _id = base64_decode(macAddress);
     
     return base64_encode(_id.c_str(), _id.length());// _id;

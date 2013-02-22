@@ -86,6 +86,10 @@ public:
         cmdTable.erase(cmdTable.begin());
     }
     
+    void removeLastCommand(){
+        cmdTable.erase(cmdTable.end());
+    }
+    
     DeleSel getCommand(){
         return cmdTable[0];
     }
