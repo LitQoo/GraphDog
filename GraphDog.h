@@ -29,8 +29,6 @@ public:
 		return _ins;
 	}
     
-    
-    
     //서버연결 후 인증, 이작업이 무사히 완료되어야 다른작업이 가능함.
     void start(string appID,string secretKey,string deviceId,JsonBox::Object *param,CCObject *target,GDSelType selector);
     //명령날리기 - 이 함수로 모든 통신을 할수있다. 쓰레드생성 실패시 false 그외 true
@@ -44,10 +42,9 @@ public:
 
     string getNick();
     string getFlag();
-
+    bool isLogin;
 private:
     GDStruct gdchunk;
-    bool isLogin;
     string aID;
     string sKey;
     string udid;
@@ -58,20 +55,23 @@ private:
     string getAuID();
     string getUdid();
     string getPlatform();
+    string getCTime();
+    
     void setup(string appID,string secretKey);
     void setAuID(string appuserID);
     void setUdid(string _id);
-    void setToken(string cTime);
+    void setCTime(string cTime);
+    
     CURL *curl_handle;
     static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static void* t_function(void *data);
     void completeCommand();
-    
+    void faildCommand();
     GraphDog(){
         curl_global_init(CURL_GLOBAL_ALL);
         curl_handle = curl_easy_init();
         curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, true);
-        curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "GraphDog/libcurl-agent/1.0");
+        curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "GraphDog-agent/1.0");
         curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, true);
         curl_easy_setopt(curl_handle, CURLOPT_COOKIEJAR,"sessid");
         

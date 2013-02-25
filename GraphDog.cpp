@@ -56,20 +56,28 @@ string GraphDog::getPlatform(){
         return "null";
 #endif
 }
-void GraphDog::setToken(string cTime){
+
+void GraphDog::setCTime(string cTime){
+    CCUserDefault::sharedUserDefault()->setStringForKey("GD_CTIME", cTime);
+    CCUserDefault::sharedUserDefault()->flush();
+}
+
+string GraphDog::getCTime(){
+    string ctime= CCUserDefault::sharedUserDefault()->getStringForKey("GD_CTIME");
+    if(ctime=="")ctime="9999";
+    return ctime;
+}
+
+string GraphDog::getToken(){
     string udid=getUdid();
     string auid=getAuID();
     string email=getEmail();
     string nick=getNick();
     string flag=getFlag();
-    string flatform=getPlatform();
-    string token=GraphDogLib::GDCreateToken(auid, udid,flag,nick,email,flatform,cTime,sKey);
-    CCUserDefault::sharedUserDefault()->setStringForKey("GD_TOKEN", token);
-    CCUserDefault::sharedUserDefault()->flush();
-}
-
-string GraphDog::getToken(){
-    return CCUserDefault::sharedUserDefault()->getStringForKey("GD_TOKEN");
+    string platform=getPlatform();
+    string cTime=getCTime();
+    string token=GraphDogLib::GDCreateToken(auid,udid,flag,nick,email,platform,cTime,sKey);
+    return token;
 }
 
 void GraphDog::setNick(string nick){
@@ -123,10 +131,6 @@ bool GraphDog::command(string action,JsonBox::Object *param,CCObject *target,GDS
     
     //저장되어있는 토큰불러오기. 없으면 생성
     token=getToken();
-    if(token==""){
-        setToken("");
-        token=getToken();
-    }
     
     //HTTP  POST string 으로 조합.
     CCString *url = CCString::createWithFormat("action=%s&aID=%s&param=%s&token=%s",action.c_str(),aID.c_str(),paramStr.c_str(),token.c_str());
@@ -150,7 +154,8 @@ bool GraphDog::command(string action,JsonBox::Object *param,CCObject *target,GDS
             GDDelegator::DeleSel cmd = GDDelegator::getInstance()->getCommand();
             JsonBox::Object resultobj;
             resultobj["state"]= JsonBox::Value("error");
-            resultobj["error"]=JsonBox::Value("don't create thread");
+            resultobj["errorMsg"]=JsonBox::Value("don't create thread");
+            resultobj["errorCode"]=JsonBox::Value(1001);
             if(cmd.target!=0 && cmd.selector!=0)((cmd.target)->*(cmd.selector))(resultobj);
             GDDelegator::getInstance()->removeLastCommand();
             return false;
@@ -180,8 +185,19 @@ void* GraphDog::t_function(void *data)
         curl_easy_setopt(handle, CURLOPT_POST, true);
         curl_easy_setopt(handle, CURLOPT_POSTFIELDS,command.url.c_str());
         curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)&GraphDog::get()->gdchunk);
-        curl_easy_perform(handle);
+        CURLcode resultCode = curl_easy_perform(handle);
         
+        if(resultCode!=CURLE_OK){
+           //실패시처리해주기
+            GraphDog::get()->gdchunk.size=1;
+#if COCOS2D_VERSION<0x00020000
+            // in cocos2d-x 1.x
+            CCScheduler::sharedScheduler()->scheduleSelector(schedule_selector(GraphDog::faildCommand), GraphDog::get(), 0,false);
+#else
+            // in cocos2d-x 2.x
+            CCDirector::sharedDirector()->getScheduler()->scheduleSelector(schedule_selector(GraphDog::faildCommand), GraphDog::get(), 0, false, 0, 0);
+#endif
+        }else{
         //완료되면 GL쓰레드로 넘어간다.
 #if COCOS2D_VERSION<0x00020000
         // in cocos2d-x 1.x
@@ -190,7 +206,7 @@ void* GraphDog::t_function(void *data)
         // in cocos2d-x 2.x
         CCDirector::sharedDirector()->getScheduler()->scheduleSelector(schedule_selector(GraphDog::completeCommand), GraphDog::get(), 0, false, 0, 0);
 #endif
-        
+        }
         //GL쓰레드에서 자료를 처리할때까지 기다린다.
         while (GraphDog::get()->gdchunk.size!=0) {
             usleep(10000);
@@ -221,12 +237,14 @@ void GraphDog::completeCommand(){
     
     //명령이 start였을경우
     string action =result["action"].getString();
-    if(action=="start"){
+    if(action=="start" || result["tokenUpdate"].getString()=="ok"){
         //정상결과시 AuID,Token 다시 세팅
         if(result["state"].getString()=="ok"){
             setAuID(result["auID"].getString());
-            setToken(result["createTime"].getString());
+            setCTime(result["createTime"].getString());
             isLogin=true;
+        }else{
+            setCTime("9999");
         }
         
         //첫실행일경우 받아온 nick,flag 저장.
@@ -241,6 +259,25 @@ void GraphDog::completeCommand(){
     
     //명령을 삭제한다.
     GDDelegator::getInstance()->removeCommand();
+    //메모리도 해제
+    if(gdchunk.memory)free(gdchunk.memory);
+    //메모리다시 할당받는다 (= t_function에 다시 돌아라는 신호를 준다.)
+    gdchunk.memory = (char*)malloc(1);
+    gdchunk.size = 0;
+}
+
+//실패
+void GraphDog::faildCommand(){
+    GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
+    JsonBox::Object resultobj;
+    resultobj["state"]=JsonBox::Value("error");
+    resultobj["errorMsg"]=JsonBox::Value("check your network state");
+    resultobj["errorCode"]=JsonBox::Value(1002);
+    if(command.target!=0 && command.selector!=0)((command.target)->*(command.selector))(resultobj);
+    
+    //명령을 삭제한다.
+    GDDelegator::getInstance()->removeCommand();
+    
     //메모리도 해제
     if(gdchunk.memory)free(gdchunk.memory);
     //메모리다시 할당받는다 (= t_function에 다시 돌아라는 신호를 준다.)
