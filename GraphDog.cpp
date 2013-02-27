@@ -4,7 +4,8 @@
 //
 
 #include "GraphDog.h"
-
+#include <sstream>
+#include <unistd.h>
 size_t GraphDog::WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp){
     size_t realsize = size * nmemb;
     struct GDStruct *mem = (struct GDStruct *)userp;
@@ -133,10 +134,12 @@ bool GraphDog::command(string action,JsonBox::Object *param,CCObject *target,GDS
     token=getToken();
     
     //HTTP  POST string 으로 조합.
-    CCString *url = CCString::createWithFormat("action=%s&aID=%s&param=%s&token=%s",action.c_str(),aID.c_str(),paramStr.c_str(),token.c_str());
+	
+	ostringstream url;
+	url << "action=" << action << "&aID=" << aID << "&param=" << paramStr << "&token=" << token;
     
     //명령을 등록.
-    GDDelegator::getInstance()->addCommand(target,selector,url->getCString());
+    GDDelegator::getInstance()->addCommand(target,selector,url.str());
     
     //쓰레드가 돌고있지 않으면
     if(GDDelegator::getInstance()->getCommandCount()>0 && isRun==false){
@@ -187,7 +190,7 @@ void* GraphDog::t_function(void *data)
         curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)&GraphDog::get()->gdchunk);
         CURLcode resultCode = curl_easy_perform(handle);
         
-        if(resultCode!=CURLE_OK){
+        if(resultCode!=CURLE_OK || GraphDog::get()->gdchunk.size==0){
            //실패시처리해주기
             GraphDog::get()->gdchunk.size=1;
 #if COCOS2D_VERSION<0x00020000
@@ -201,7 +204,7 @@ void* GraphDog::t_function(void *data)
         //완료되면 GL쓰레드로 넘어간다.
 #if COCOS2D_VERSION<0x00020000
         // in cocos2d-x 1.x
-        CCScheduler::sharedScheduler()->scheduleSelector(schedule_selector(GraphDog::completeCommand), GraphDog::get(), 0,false);
+        CCScheduler::sharedScheduler()->scheduleSelector(schedule_selector(GraphDog::completeCommand), GraphDog::get(), 0, false);
 #else
         // in cocos2d-x 2.x
         CCDirector::sharedDirector()->getScheduler()->scheduleSelector(schedule_selector(GraphDog::completeCommand), GraphDog::get(), 0, false, 0, 0);
@@ -222,7 +225,8 @@ void* GraphDog::t_function(void *data)
 }
 
 //명령수행완료.
-void GraphDog::completeCommand(){
+void GraphDog::completeCommand(ccTime dt){
+	CCScheduler::sharedScheduler()->unscheduleSelector(schedule_selector(GraphDog::completeCommand), this);
     //명령문자열받기
     string resultStr = gdchunk.memory;
     GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
@@ -267,7 +271,8 @@ void GraphDog::completeCommand(){
 }
 
 //실패
-void GraphDog::faildCommand(){
+void GraphDog::faildCommand(ccTime dt){
+	CCScheduler::sharedScheduler()->unscheduleSelector(schedule_selector(GraphDog::faildCommand), this);
     GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
     JsonBox::Object resultobj;
     resultobj["state"]=JsonBox::Value("error");

@@ -18,9 +18,9 @@ struct GDStruct {
     size_t size;
 };
 
-class GraphDog:public CCNode{
+
+class GraphDog: public CCObject{
 public:
-    
     static GraphDog* get()
 	{
 		static GraphDog* _ins = 0;
@@ -30,7 +30,7 @@ public:
 	}
     
     //서버연결 후 인증, 이작업이 무사히 완료되어야 다른작업이 가능함.
-    void start(string appID,string secretKey,string deviceId,JsonBox::Object *param,CCObject *target,GDSelType selector);
+    void start(string appID,string secretKey,string deviceId,JsonBox::Object *param, CCObject *target,GDSelType selector);
     //명령날리기 - 이 함수로 모든 통신을 할수있다. 쓰레드생성 실패시 false 그외 true
     bool command(string action,JsonBox::Object *param,CCObject *target,GDSelType selector);
     //닉네임저장
@@ -65,8 +65,8 @@ private:
     CURL *curl_handle;
     static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static void* t_function(void *data);
-    void completeCommand();
-    void faildCommand();
+    void completeCommand(ccTime dt);
+    void faildCommand(ccTime dt);
     GraphDog(){
         curl_global_init(CURL_GLOBAL_ALL);
         curl_handle = curl_easy_init();
