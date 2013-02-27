@@ -73,7 +73,17 @@ public:
     
     
 public:
-    
+    void removeCommand(CCObject* target)
+	{
+		for(auto iter = cmdTable.begin(); iter != cmdTable.end(); ++iter)
+		{
+			if(iter->target == target)
+			{
+				cmdTable.erase(iter);
+				break;
+			}
+		}
+	}
     void addCommand(CCObject* target, GDSelType selector,string url){
         DeleSel temp;
 		temp.target = target;
@@ -83,15 +93,18 @@ public:
     }
     
     void removeCommand(){
-        cmdTable.erase(cmdTable.begin());
+		if(!cmdTable.empty())
+			cmdTable.erase(cmdTable.begin());
     }
     
     void removeLastCommand(){
-        cmdTable.erase(cmdTable.end());
+		if(!cmdTable.empty())
+			cmdTable.erase(cmdTable.end());
     }
     
     DeleSel getCommand(){
-        return cmdTable[0];
+		if(!cmdTable.empty())
+			return cmdTable[0];
     }
     
     int getCommandCount(){
