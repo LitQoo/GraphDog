@@ -113,7 +113,7 @@ void GraphDog::start(string appID,string secretKey,string deviceId,JsonBox::Obje
     this->command("start", param, target, selector);
 }
 
-bool GraphDog::command(string action,JsonBox::Object *param,CCObject *target,GDSelType selector){
+bool GraphDog::command(string action, const JsonBox::Object* const param,CCObject *target,GDSelType selector){
     
     string udid=getUdid();
     string email=getEmail();

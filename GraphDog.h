@@ -32,7 +32,7 @@ public:
     //서버연결 후 인증, 이작업이 무사히 완료되어야 다른작업이 가능함.
     void start(string appID,string secretKey,string deviceId,JsonBox::Object *param, CCObject *target,GDSelType selector);
     //명령날리기 - 이 함수로 모든 통신을 할수있다. 쓰레드생성 실패시 false 그외 true
-    bool command(string action,JsonBox::Object *param,CCObject *target,GDSelType selector);
+    bool command(string action, const JsonBox::Object* const param,CCObject *target,GDSelType selector);
     //닉네임저장
     void setNick(string nick);
     //플레그저장
