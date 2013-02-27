@@ -225,8 +225,10 @@ void* GraphDog::t_function(void *data)
 }
 
 //명령수행완료.
-void GraphDog::completeCommand(ccTime dt){
+void GraphDog::completeCommand(float dt){
+#if COCOS2D_VERSION<0x00020000
 	CCScheduler::sharedScheduler()->unscheduleSelector(schedule_selector(GraphDog::completeCommand), this);
+#endif
     //명령문자열받기
     string resultStr = gdchunk.memory;
     GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
@@ -271,8 +273,10 @@ void GraphDog::completeCommand(ccTime dt){
 }
 
 //실패
-void GraphDog::faildCommand(ccTime dt){
+void GraphDog::faildCommand(float dt){
+#if COCOS2D_VERSION<0x00020000
 	CCScheduler::sharedScheduler()->unscheduleSelector(schedule_selector(GraphDog::faildCommand), this);
+#endif
     GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
     JsonBox::Object resultobj;
     resultobj["state"]=JsonBox::Value("error");

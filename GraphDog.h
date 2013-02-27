@@ -65,8 +65,8 @@ private:
     CURL *curl_handle;
     static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static void* t_function(void *data);
-    void completeCommand(ccTime dt);
-    void faildCommand(ccTime dt);
+    void completeCommand(float dt);
+    void faildCommand(float dt);
     GraphDog(){
         curl_global_init(CURL_GLOBAL_ALL);
         curl_handle = curl_easy_init();
