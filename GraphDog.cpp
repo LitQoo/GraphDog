@@ -22,6 +22,7 @@ size_t GraphDog::WriteMemoryCallback(void *contents, size_t size, size_t nmemb, 
     return realsize;
 }
 
+
 void GraphDog::setUdid(string _id){
     udid=_id;
 }
