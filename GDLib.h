@@ -73,6 +73,7 @@ public:
     
     
 public:
+	
     void removeCommand(CCObject* target)
 	{
 		for(auto iter = cmdTable.begin(); iter != cmdTable.end(); ++iter)
