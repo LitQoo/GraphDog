@@ -84,4 +84,6 @@ private:
         curl_easy_cleanup(curl_handle);
     }
 };
+
+extern GraphDog* graphdog;
 #endif /* defined(__archervszombie__GraphDog__) */

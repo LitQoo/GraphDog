@@ -299,3 +299,5 @@ void GraphDog::faildCommand(float dt){
     gdchunk.memory = (char*)malloc(1);
     gdchunk.size = 0;
 }
+
+GraphDog* graphdog = GraphDog::get();
