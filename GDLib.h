@@ -106,6 +106,12 @@ public:
     DeleSel getCommand(){
 		if(!cmdTable.empty())
 			return cmdTable[0];
+		else
+		{
+			DeleSel ttt;
+			ttt.target = NULL;
+			return ttt;
+		}
     }
     
     int getCommandCount(){

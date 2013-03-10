@@ -179,6 +179,7 @@ void* GraphDog::t_function(void *data)
     
     //GDDelegator 에 들어있는 명령을 순차적으로 수행한다.
     while (1) {
+		if(GDDelegator::getInstance()->getCommandCount()<=0)	break;
         GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
         
         //curl으로 명령을 날리고 겨로가를 얻는다.
