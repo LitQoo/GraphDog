@@ -29,8 +29,8 @@ public:
 		return _ins;
 	}
     
-    //서버연결 후 인증, 이작업이 무사히 완료되어야 다른작업이 가능함.
-    void start(string appID,string secretKey,string deviceId,JsonBox::Object *param, CCObject *target,GDSelType selector);
+    //시작설정
+    void setup(string appID,string secretKey,string deviceId);
     //명령날리기 - 이 함수로 모든 통신을 할수있다. 쓰레드생성 실패시 false 그외 true
     bool command(string action, const JsonBox::Object* const param,CCObject *target,GDSelType selector);
     //닉네임저장
@@ -41,8 +41,16 @@ public:
     void setEmail(string email);
 	// 딜리게이터 삭제
 	void removeCommand(CCObject* target);
+    //언어저장
+    void setLanguage(string lang);
+    
     string getNick();
     string getFlag();
+    string getAuID();
+    string getLanguage();
+    string getPlatform();
+    string getEmail();
+    
     bool isLogin;
 private:
     GDStruct gdchunk;
@@ -52,13 +60,9 @@ private:
     bool isRun;
     CURL* getCURL();
     string getToken();
-    string getEmail();
-    string getAuID();
     string getUdid();
-    string getPlatform();
     string getCTime();
-    
-    void setup(string appID,string secretKey);
+    int errorCount;
     void setAuID(string appuserID);
     void setUdid(string _id);
     void setCTime(string cTime);
@@ -78,6 +82,7 @@ private:
         
         isRun=false;
         isLogin=false;
+        errorCount=0;
     }
     
     ~GraphDog(){

@@ -25,33 +25,37 @@ using namespace std;
 
 namespace GraphDogLib {
     
-typedef unsigned long   DWORD;
-typedef unsigned short  WORD;
-typedef unsigned char   BYTE;
+    typedef unsigned long   DWORD;
+    typedef unsigned short  WORD;
+    typedef unsigned char   BYTE;
 
-typedef	union	{
-	DWORD   dw[2];
-	WORD    w[4];
-	BYTE	b[8];
-} BIT64;
-
-
-void IP(BIT64 *text);
-void FP(BIT64 *text);
-void MakeKey(BIT64 key, BIT64 keys[16]);
-void RoundFunction(BIT64 key, BIT64 *text);
-void des_encrytion(BIT64 key, BIT64 plain, BIT64 *out);
-void des_decrytion(BIT64 key, BIT64 plain, BIT64 *out);
-vector<char> des_enc(string secretKey, string msg);
+    typedef	union	{
+        DWORD   dw[2];
+        WORD    w[4];
+        BYTE	b[8];
+    } BIT64;
 
 
-std::string base64_encode(char const* bytes_to_encode, unsigned int in_len) ;
-std::string base64_decode(std::string const& encoded_string);
-std::string gdkeyEnc(const std::string& msg,string key);
+    void IP(BIT64 *text);
+    void FP(BIT64 *text);
+    void MakeKey(BIT64 key, BIT64 keys[16]);
+    void RoundFunction(BIT64 key, BIT64 *text);
+    void des_encrytion(BIT64 key, BIT64 plain, BIT64 *out);
+    void des_decrytion(BIT64 key, BIT64 plain, BIT64 *out);
+    vector<char> des_enc(string secretKey, string msg);
 
 
-std::string GDCreateToken(string auID,string udid,string flag,string nick,string email,string platform,string cTime,string secretKey);
-std::string getDeviceID();
+    std::string base64_encode(char const* bytes_to_encode, unsigned int in_len) ;
+    std::string base64_decode(std::string const& encoded_string);
+    std::string gdkeyEnc(const std::string& msg,string key);
+
+
+    std::string GDCreateToken(string auID,string udid,string flag,string lang,string nick,string email,string platform,string cTime,string secretKey);
+    std::string getDeviceID();
+    
+    void replaceString( std::string & strCallId, const char * pszBefore, const char * pszAfter );
+    string JsonObjectToString(JsonBox::Object _obj);
+    JsonBox::Object StringToJsonObject(string _str);
 }
 
 #pragma once
@@ -69,6 +73,7 @@ public:
 		CCObject* target;
 		GDSelType selector;
         string url;
+        string paramStr;
 	};
     
     
@@ -85,12 +90,24 @@ public:
 			}
 		}
 	}
-    void addCommand(CCObject* target, GDSelType selector,string url){
+    void addCommand(CCObject* target, GDSelType selector,string url,string param){
         DeleSel temp;
 		temp.target = target;
 		temp.selector = selector;
         temp.url = url;
+        temp.paramStr = param;
         cmdTable.push_back(temp);
+    }
+    
+    void addCommandAtFirst(CCObject* target, GDSelType selector,string url){
+        DeleSel temp;
+		temp.target = target;
+		temp.selector = selector;
+        temp.url = url;
+        
+        vector<DeleSel>::iterator it;
+        it = cmdTable.begin();
+        cmdTable.insert(it, temp);
     }
     
     void removeCommand(){

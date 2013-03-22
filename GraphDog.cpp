@@ -26,28 +26,30 @@ size_t GraphDog::WriteMemoryCallback(void *contents, size_t size, size_t nmemb, 
 void GraphDog::setUdid(string _id){
     udid=_id;
 }
-void GraphDog::setup(string appID,string secretKey){
+void GraphDog::setup(string appID,string secretKey,string deviceId){
     aID=appID;
     sKey=secretKey;
+    this->setUdid(deviceId);
 }
+
 void GraphDog::setAuID(string appuserID){
-    CCUserDefault::sharedUserDefault()->setStringForKey("GD_AUID", appuserID.c_str());
+    CCUserDefault::sharedUserDefault()->setStringForKey("GRAPHDOG_AUID", appuserID.c_str());
     CCUserDefault::sharedUserDefault()->flush();
 }
 string GraphDog::getAuID(){
-    return CCUserDefault::sharedUserDefault()->getStringForKey("GD_AUID");
+    return CCUserDefault::sharedUserDefault()->getStringForKey("GRAPHDOG_AUID");
 }
 string GraphDog::getUdid(){
     return udid;
 }
 
 void GraphDog::setEmail(string email){
-    CCUserDefault::sharedUserDefault()->setStringForKey("GD_EMAIL", email);
+    CCUserDefault::sharedUserDefault()->setStringForKey("GRAPHDOG_EMAIL", email);
     CCUserDefault::sharedUserDefault()->flush();
 }
 
 string GraphDog::getEmail(){
-    return CCUserDefault::sharedUserDefault()->getStringForKey("GD_EMAIL");
+    return CCUserDefault::sharedUserDefault()->getStringForKey("GRAPHDOG_EMAIL");
 }
 string GraphDog::getPlatform(){
 #if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
@@ -60,12 +62,12 @@ string GraphDog::getPlatform(){
 }
 
 void GraphDog::setCTime(string cTime){
-    CCUserDefault::sharedUserDefault()->setStringForKey("GD_CTIME", cTime);
+    CCUserDefault::sharedUserDefault()->setStringForKey("GRAPHDOG_CTIME", cTime);
     CCUserDefault::sharedUserDefault()->flush();
 }
 
 string GraphDog::getCTime(){
-    string ctime= CCUserDefault::sharedUserDefault()->getStringForKey("GD_CTIME");
+    string ctime= CCUserDefault::sharedUserDefault()->getStringForKey("GRAPHDOG_CTIME");
     if(ctime=="")ctime="9999";
     return ctime;
 }
@@ -76,43 +78,47 @@ string GraphDog::getToken(){
     string email=getEmail();
     string nick=getNick();
     string flag=getFlag();
+    string lang=getLanguage();
     string platform=getPlatform();
     string cTime=getCTime();
-    string token=GraphDogLib::GDCreateToken(auid,udid,flag,nick,email,platform,cTime,sKey);
+    string token=GraphDogLib::GDCreateToken(auid,udid,flag,lang,nick,email,platform,cTime,sKey);
     return token;
 }
 
 void GraphDog::setNick(string nick){
-    CCUserDefault::sharedUserDefault()->setStringForKey("GD_NICK", nick);
+    GraphDogLib::replaceString(nick,"|","l");
+    CCUserDefault::sharedUserDefault()->setStringForKey("GRAPHDOG_NICK", nick);
     CCUserDefault::sharedUserDefault()->flush();
 }
 
 string GraphDog::getNick(){
-    return CCUserDefault::sharedUserDefault()->getStringForKey("GD_NICK");
+    return CCUserDefault::sharedUserDefault()->getStringForKey("GRAPHDOG_NICK");
 }
 
 void GraphDog::setFlag(string flag){
-    CCUserDefault::sharedUserDefault()->setStringForKey("GD_FLAG", flag);
+    CCUserDefault::sharedUserDefault()->setStringForKey("GRAPHDOG_FLAG", flag);
     CCUserDefault::sharedUserDefault()->flush();
 }
 
 string GraphDog::getFlag(){
-    return CCUserDefault::sharedUserDefault()->getStringForKey("GD_FLAG");
+    return CCUserDefault::sharedUserDefault()->getStringForKey("GRAPHDOG_FLAG");
+}
+
+void GraphDog::setLanguage(string lang){
+    CCUserDefault::sharedUserDefault()->setStringForKey("GRAPHDOG_LANG", lang);
+    CCUserDefault::sharedUserDefault()->flush();
+}
+
+string GraphDog::getLanguage(){
+    string lang = CCUserDefault::sharedUserDefault()->getStringForKey("GRAPHDOG_LANG");
+    if(lang=="")lang="en";
+    return lang;
 }
 
 CURL* GraphDog::getCURL(){
     return curl_handle;
 }
 
-void GraphDog::start(string appID,string secretKey,string deviceId,JsonBox::Object *param,CCObject *target,GDSelType selector){
-    this->setup(appID,secretKey);
-    this->setUdid(deviceId);
-
-    JsonBox::Object abc;
-    JsonBox::Array ary;
-    
-    this->command("start", param, target, selector);
-}
 
 bool GraphDog::command(string action, const JsonBox::Object* const param,CCObject *target,GDSelType selector){
     
@@ -120,15 +126,14 @@ bool GraphDog::command(string action, const JsonBox::Object* const param,CCObjec
     string email=getEmail();
     string auid=getAuID();
     string token;
-    string paramStr;
-    
+    string paramStr="";
     
     //파라메터를 json string 으로 변환
     if(param!=NULL){
         ostringstream oss;
         oss << *param;
         paramStr = oss.str();
-        paramStr = GraphDogLib::base64_encode(paramStr.c_str(),paramStr.length());
+       
     }
     
     //저장되어있는 토큰불러오기. 없으면 생성
@@ -137,10 +142,10 @@ bool GraphDog::command(string action, const JsonBox::Object* const param,CCObjec
     //HTTP  POST string 으로 조합.
 	
 	ostringstream url;
-	url << "action=" << action << "&aID=" << aID << "&param=" << paramStr << "&token=" << token;
+	url << "action=" << action << "&aID=" << aID;
     
     //명령을 등록.
-    GDDelegator::getInstance()->addCommand(target,selector,url.str());
+    GDDelegator::getInstance()->addCommand(target,selector,url.str(),paramStr);
     
     //쓰레드가 돌고있지 않으면
     if(GDDelegator::getInstance()->getCommandCount()>0 && isRun==false){
@@ -182,9 +187,18 @@ void* GraphDog::t_function(void *data)
 		if(GDDelegator::getInstance()->getCommandCount()<=0)	break;
         GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
         
+        string token=GraphDog::get()->getToken();
+        string paramStr=GraphDogLib::base64_encode(command.paramStr.c_str(),command.paramStr.length());
+        command.url=command.url.append("&token=");
+        command.url=command.url.append(token);
+        command.url=command.url.append("&param=");
+        command.url=command.url.append(paramStr);
+         
+        
+        // << "&param=" << paramStr
         //curl으로 명령을 날리고 겨로가를 얻는다.
         CURL *handle = GraphDog::get()->getCURL();
-        curl_easy_setopt(handle, CURLOPT_URL, "http://graphdog.com/cmd/");
+        curl_easy_setopt(handle, CURLOPT_URL, "http://www.graphdog.com/command/");
         curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
         curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, true);
         curl_easy_setopt(handle, CURLOPT_POST, true);
@@ -223,6 +237,7 @@ void* GraphDog::t_function(void *data)
     //메모리해제
     if(GraphDog::get()->gdchunk.memory)free(GraphDog::get()->gdchunk.memory);
     GraphDog::get()->isRun=false;
+    pthread_exit(NULL);
     return NULL;
 }
 
@@ -237,38 +252,59 @@ void GraphDog::completeCommand(float dt){
 	CCScheduler::sharedScheduler()->unscheduleSelector(schedule_selector(GraphDog::completeCommand), this);
     //명령문자열받기
 #endif
+    
+    bool commandExec = true;
     string resultStr = gdchunk.memory;
     GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
     
-    //명령문자열 json::value 로 변환
-    JsonBox::Value result;
-    result.loadFromString(resultStr.c_str());
-    
     //명령문자열 json::object 로 변환
-    JsonBox::Object resultobj = result.getObject();
+    JsonBox::Object resultobj = GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
     resultobj["resultString"]=JsonBox::Value(resultStr);
     
-    //명령이 start였을경우
-    string action =result["action"].getString();
-    if(action=="start" || result["tokenUpdate"].getString()=="ok"){
+    //callbackparam
+    if(command.paramStr!=""){
+        JsonBox::Object param =  GraphDogLib::StringToJsonObject(command.paramStr);
+        resultobj["param"]=JsonBox::Value(param);
+    }
+    
+    // 새토큰발급일 경우
+    if(resultobj["tokenUpdate"].getString()=="ok"){
         //정상결과시 AuID,Token 다시 세팅
-        if(result["state"].getString()=="ok"){
-            setAuID(result["auID"].getString());
-            setCTime(result["createTime"].getString());
+        if(resultobj["state"].getString()=="ok"){
+            setAuID(resultobj["auID"].getString());
+            setCTime(resultobj["createTime"].getString());
             isLogin=true;
+            CCLog("tokenUpdate");
         }else{
             setCTime("9999");
         }
         
         //첫실행일경우 받아온 nick,flag 저장.
-        if(result["isFirst"].getBoolean()==true){
-            setNick(result["nick"].getString());
-            setFlag(result["flag"].getString());
+        if(resultobj["isFirst"].getBoolean()==true){
+            setNick(resultobj["nick"].getString());
+            setFlag(resultobj["flag"].getString());
+        }
+        //기존명령 다시 등록
+        GDDelegator::getInstance()->addCommandAtFirst(command.target, command.selector, command.url);
+        commandExec=false;
+    }
+    
+    if(resultobj["errorcode"].getInt()==9999){
+        setCTime("9999");
+        CCLog("auth error");
+        errorCount++;
+        if(errorCount<5){
+            GDDelegator::getInstance()->addCommandAtFirst(command.target, command.selector, command.url);
+            commandExec=false;
         }
     }
     
+    if(resultobj["state"].getString()=="ok"){
+        errorCount=0;
+    }
+    
     //결과를 지정한 target,selector 으로 넘긴다.
-    if(command.target!=0 && command.selector!=0)((command.target)->*(command.selector))(resultobj);
+    if(commandExec && command.target!=0 && command.selector!=0)((command.target)->*(command.selector))(resultobj);
     
     //명령을 삭제한다.
     GDDelegator::getInstance()->removeCommand();
