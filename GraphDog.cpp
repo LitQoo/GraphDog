@@ -193,7 +193,9 @@ void* GraphDog::t_function(void *data)
         command.url=command.url.append(token);
         command.url=command.url.append("&param=");
         command.url=command.url.append(paramStr);
-         
+        command.url=command.url.append("&version=");
+        command.url=command.url.append(GRAPHDOG_VERSION);
+        
         
         // << "&param=" << paramStr
         //curl으로 명령을 날리고 겨로가를 얻는다.

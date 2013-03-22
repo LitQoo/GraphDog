@@ -12,7 +12,8 @@
 #include <iostream>
 #include "GDLib.h"
 #include "curl/curl.h"
-
+#include <stdlib.h>
+#define GRAPHDOG_VERSION    "0.9"
 struct GDStruct {
     char *memory;
     size_t size;
