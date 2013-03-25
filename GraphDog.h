@@ -88,6 +88,7 @@ private:
     
     ~GraphDog(){
         curl_easy_cleanup(curl_handle);
+		curl_global_cleanup();
     }
 };
 

@@ -206,6 +206,8 @@ void* GraphDog::t_function(void *data)
         curl_easy_setopt(handle, CURLOPT_POST, true);
         curl_easy_setopt(handle, CURLOPT_POSTFIELDS,command.url.c_str());
         curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)&GraphDog::get()->gdchunk);
+		curl_easy_setopt(handle, CURLOPT_TIMEOUT, 10 );
+//		curl_setopt($ch,CURLOPT_TIMEOUT,1000);
         CURLcode resultCode = curl_easy_perform(handle);
         
         if(resultCode!=CURLE_OK || GraphDog::get()->gdchunk.size==0){
@@ -260,6 +262,7 @@ void GraphDog::completeCommand(float dt){
     GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
     
     //명령문자열 json::object 로 변환
+	CCLog("%s", resultStr.c_str());
     JsonBox::Object resultobj = GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
     resultobj["resultString"]=JsonBox::Value(resultStr);
     
@@ -327,6 +330,11 @@ void GraphDog::faildCommand(float dt){
     resultobj["state"]=JsonBox::Value("error");
     resultobj["errorMsg"]=JsonBox::Value("check your network state");
     resultobj["errorCode"]=JsonBox::Value(1002);
+	//callbackparam
+    if(command.paramStr!=""){
+        JsonBox::Object param =  GraphDogLib::StringToJsonObject(command.paramStr);
+        resultobj["param"]=JsonBox::Value(param);
+    }
     if(command.target!=0 && command.selector!=0)((command.target)->*(command.selector))(resultobj);
     
     //명령을 삭제한다.
