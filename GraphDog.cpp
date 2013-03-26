@@ -270,7 +270,7 @@ void GraphDog::completeCommand(float dt){
     if(command.paramStr!=""){
         JsonBox::Object param =  GraphDogLib::StringToJsonObject(command.paramStr);
         resultobj["param"]=JsonBox::Value(param);
-    }
+    } 
     
     // 새토큰발급일 경우
     if(resultobj["tokenUpdate"].getString()=="ok"){

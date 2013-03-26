@@ -556,6 +556,9 @@ std::string getDeviceID() {
     string _id;
     
     #if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+    
+    
+
     char* macAddress=(char*)malloc(18);
         std::string ifName="en0";
         int  success;
