@@ -6,6 +6,9 @@
 #include "GraphDog.h"
 #include <sstream>
 #include <unistd.h>
+
+
+int AutoIncrease::cnt = 0;
 size_t GraphDog::WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp){
     size_t realsize = size * nmemb;
     struct GDStruct *mem = (struct GDStruct *)userp;
@@ -30,6 +33,14 @@ void GraphDog::setup(string appID,string secretKey,string deviceId){
     aID=appID;
     sKey=secretKey;
     this->setUdid(deviceId);
+	
+#if COCOS2D_VERSION<0x00020000
+	// in cocos2d-x 1.x
+	CCScheduler::sharedScheduler()->scheduleSelector(schedule_selector(GraphDog::receivedCommand), this, 0,false);
+#else
+	// in cocos2d-x 2.x
+	CCDirector::sharedDirector()->getScheduler()->scheduleSelector(schedule_selector(GraphDog::receivedCommand), this, 0.f, false, kCCRepeatForever, 0);
+#endif
 }
 
 void GraphDog::setAuID(string appuserID){
@@ -53,11 +64,11 @@ string GraphDog::getEmail(){
 }
 string GraphDog::getPlatform(){
 #if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
-        return "ios";
+	return "ios";
 #elif CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
-        return "android";
+	return "android";
 #else
-        return "null";
+	return "null";
 #endif
 }
 
@@ -73,6 +84,7 @@ string GraphDog::getCTime(){
 }
 
 string GraphDog::getToken(){
+	
     string udid=getUdid();
     string auid=getAuID();
     string email=getEmail();
@@ -82,6 +94,7 @@ string GraphDog::getToken(){
     string platform=getPlatform();
     string cTime=getCTime();
     string token=GraphDogLib::GDCreateToken(auid,udid,flag,lang,nick,email,platform,cTime,sKey);
+	
     return token;
 }
 
@@ -133,7 +146,7 @@ bool GraphDog::command(string action, const JsonBox::Object* const param,CCObjec
         ostringstream oss;
         oss << *param;
         paramStr = oss.str();
-       
+		
     }
     
     //저장되어있는 토큰불러오기. 없으면 생성
@@ -145,111 +158,147 @@ bool GraphDog::command(string action, const JsonBox::Object* const param,CCObjec
 	url << "action=" << action << "&aID=" << aID;
     
     //명령을 등록.
-    GDDelegator::getInstance()->addCommand(target,selector,url.str(),paramStr);
-    
+	int insertIndex = AutoIncrease::get();
+	CommandType cmd = {target, selector, url.str(), paramStr, this, {(char*)malloc(1), 0, CURLE_AGAIN}, action};
+	commands[insertIndex] = cmd;
     //쓰레드가 돌고있지 않으면
-    if(GDDelegator::getInstance()->getCommandCount()>0 && isRun==false){
-        //쓰레드돌리기
-        isRun=true;
-        pthread_t p_thread;
-        int thr_id;
-            
-        // 쓰레드 생성 아규먼트로 1 을 넘긴다.
-        thr_id = pthread_create(&p_thread, NULL, t_function, NULL);
-        if (thr_id < 0)
-        {
-            isRun=false;
-            //쓰레드생성오류시
-            GDDelegator::DeleSel cmd = GDDelegator::getInstance()->getCommand();
-            JsonBox::Object resultobj;
-            resultobj["state"]= JsonBox::Value("error");
-            resultobj["errorMsg"]=JsonBox::Value("don't create thread");
-            resultobj["errorCode"]=JsonBox::Value(1001);
-            if(cmd.target!=0 && cmd.selector!=0)((cmd.target)->*(cmd.selector))(resultobj);
-            GDDelegator::getInstance()->removeLastCommand();
-            return false;
-        }
+    
+    //쓰레드돌리기
+
+	pthread_t p_thread;
+	int thr_id;
+	
+	// 쓰레드 생성 아규먼트로 1 을 넘긴다.
+	thr_id = pthread_create(&p_thread, NULL, t_function, (void*)insertIndex);
+	if (thr_id < 0)
+	{
+		//쓰레드생성오류시
+		JsonBox::Object resultobj;
+		resultobj["state"]= JsonBox::Value("error");
+		resultobj["errorMsg"]=JsonBox::Value("don't create thread");
+		resultobj["errorCode"]=JsonBox::Value(1001);
+		if(cmd.target!=0 && cmd.selector!=0)
+			((cmd.target)->*(cmd.selector))(resultobj);
+		if(cmd.chunk.memory)
+			free(cmd.chunk.memory);
+		
+		commands.erase(insertIndex);
+		return false;
+	}
         
-    }
+		
     
     return true;
 }
 
 //쓰레드펑션
-void* GraphDog::t_function(void *data)
-{
-    //메모리할당
-    GraphDog::get()->gdchunk.memory = (char*)malloc(1);
-    GraphDog::get()->gdchunk.size = 0;
-    
-    //GDDelegator 에 들어있는 명령을 순차적으로 수행한다.
-    while (1) {
-		if(GDDelegator::getInstance()->getCommandCount()<=0)	break;
-        GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
-        
-        string token=GraphDog::get()->getToken();
-        string paramStr=GraphDogLib::base64_encode(command.paramStr.c_str(),command.paramStr.length());
-        command.url=command.url.append("&token=");
-        command.url=command.url.append(token);
-        command.url=command.url.append("&param=");
-        command.url=command.url.append(paramStr);
-        command.url=command.url.append("&version=");
-        command.url=command.url.append(GRAPHDOG_VERSION);
-        
-        
-        // << "&param=" << paramStr
-        //curl으로 명령을 날리고 겨로가를 얻는다.
-        CURL *handle = GraphDog::get()->getCURL();
-        curl_easy_setopt(handle, CURLOPT_URL, "http://www.graphdog.com/command/");
-        curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-        curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, true);
-        curl_easy_setopt(handle, CURLOPT_POST, true);
-        curl_easy_setopt(handle, CURLOPT_POSTFIELDS,command.url.c_str());
-        curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)&GraphDog::get()->gdchunk);
-		curl_easy_setopt(handle, CURLOPT_TIMEOUT, 10 );
-//		curl_setopt($ch,CURLOPT_TIMEOUT,1000);
-        CURLcode resultCode = curl_easy_perform(handle);
-        
-        if(resultCode!=CURLE_OK || GraphDog::get()->gdchunk.size==0){
-           //실패시처리해주기
-            GraphDog::get()->gdchunk.size=1;
-#if COCOS2D_VERSION<0x00020000
-            // in cocos2d-x 1.x
-            CCScheduler::sharedScheduler()->scheduleSelector(schedule_selector(GraphDog::faildCommand), GraphDog::get(), 0,false);
-#else
-            // in cocos2d-x 2.x
-            CCDirector::sharedDirector()->getScheduler()->scheduleSelector(schedule_selector(GraphDog::faildCommand), GraphDog::get(), 0, false, 0, 0);
-#endif
-        }else{
-        //완료되면 GL쓰레드로 넘어간다.
-#if COCOS2D_VERSION<0x00020000
-        // in cocos2d-x 1.x
-        CCScheduler::sharedScheduler()->scheduleSelector(schedule_selector(GraphDog::completeCommand), GraphDog::get(), 0, false);
-#else
-        // in cocos2d-x 2.x
-        CCDirector::sharedDirector()->getScheduler()->scheduleSelector(schedule_selector(GraphDog::completeCommand), GraphDog::get(), 0, false, 0, 0);
-#endif
-        }
-        //GL쓰레드에서 자료를 처리할때까지 기다린다.
-        while (GraphDog::get()->gdchunk.size!=0) {
-            usleep(10000);
-        }
-        
-        //명령이 더이상 없으면 종료.
-        if(GDDelegator::getInstance()->getCommandCount()<=0)break;
-    }
-    //메모리해제
-    if(GraphDog::get()->gdchunk.memory)free(GraphDog::get()->gdchunk.memory);
-    GraphDog::get()->isRun=false;
-    pthread_exit(NULL);
-    return NULL;
+void* GraphDog::t_function(void *_insertIndex)
+{	
+	int insertIndex = (int)_insertIndex;
+//	std::map<int, CommandType>& commands = graphdog->commands;
+//	pthread_mutex_lock(&graphdog->cmdsMutex);
+	CommandType& command = graphdog->commands[insertIndex];
+		
+
+	pthread_mutex_lock(&command.caller->t_functionMutex);
+	
+	string token=GraphDog::get()->getToken();
+
+	string paramStr=GraphDogLib::base64_encode(command.paramStr.c_str(), command.paramStr.length());
+	command.url=command.url.append("&token=");
+	command.url=command.url.append(token);
+	command.url=command.url.append("&param=");
+	command.url=command.url.append(paramStr);
+	command.url=command.url.append("&version=");
+	command.url=command.url.append(GRAPHDOG_VERSION);
+	
+	
+	// << "&param=" << paramStr
+	//curl으로 명령을 날리고 겨로가를 얻는다.
+	CURL *handle = GraphDog::get()->getCURL();
+	curl_easy_setopt(handle, CURLOPT_POSTFIELDS,command.url.c_str());
+	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)&command.chunk);
+	
+	//		curl_setopt($ch,CURLOPT_TIMEOUT,1000);
+//	pthread_mutex_unlock(&graphdog->cmdsMutex);
+	CURLcode resultCode = curl_easy_perform(handle);
+	
+	string resultStr = command.chunk.memory;// gdchunk.memory;
+	JsonBox::Object resultobj = GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
+	resultobj["resultString"]=JsonBox::Value(resultStr);
+	
+	//callbackparam
+	if(command.paramStr!=""){
+		JsonBox::Object param =  GraphDogLib::StringToJsonObject(command.paramStr);
+		resultobj["param"]=JsonBox::Value(param);
+	}
+	
+	// 새토큰발급일 경우
+	if(resultobj["tokenUpdate"].getString()=="ok"){
+		//정상결과시 AuID,Token 다시 세팅
+		if(resultobj["state"].getString()=="ok"){
+			command.caller->setAuID(resultobj["auID"].getString());
+			command.caller->setCTime(resultobj["createTime"].getString());
+			command.caller->isLogin=true;
+			CCLog("tokenUpdate");
+		}else{
+			command.caller->setCTime("9999");
+		}
+		
+		//첫실행일경우 받아온 nick,flag 저장.
+		if(resultobj["isFirst"].getBoolean()==true){
+			command.caller->setNick(resultobj["nick"].getString());
+			command.caller->setFlag(resultobj["flag"].getString());
+		}
+		//기존명령 다시 등록
+		JsonBox::Value param;
+		param.loadFromString(command.paramStr);
+		command.caller->command(command.action, &param.getObject(), command.target, command.selector);
+		command.selector = 0;
+		command.target = 0;
+	}
+	
+	if(resultobj["errorcode"].getInt()==9999){
+		command.caller->setCTime("9999");
+		CCLog("auth error");
+		command.caller->errorCount++;
+		if(command.caller->errorCount<5){
+			JsonBox::Value param;
+			param.loadFromString(command.paramStr);
+			command.caller->command(command.action, &param.getObject(), command.target, command.selector);
+			command.selector = 0;
+			command.target = 0;
+		}
+	}
+	
+	if(resultobj["state"].getString()=="ok"){
+		command.caller->errorCount=0;
+	}
+	command.result = resultobj;
+	command.chunk.resultCode = resultCode;
+	
+	
+	pthread_mutex_unlock(&command.caller->t_functionMutex);
+	
+	return NULL;
 }
 
 void GraphDog::removeCommand(cocos2d::CCObject *target)
 {
-	GDDelegator::getInstance()->removeCommand(target);
+	//GDDelegator::getInstance()->removeCommand(target);
+//	pthread_mutex_lock(&cmdsMutex);
+	for(std::map<int, CommandType>::iterator iter = commands.begin(); iter != commands.end(); ++iter)
+	{
+		if(iter->second.target == target)
+		{
+			iter->second.target = 0;
+			iter->second.selector = 0;
+		}
+	}
+//	pthread_mutex_unlock(&cmdsMutex);
 }
 
+<<<<<<< HEAD
 //명령수행완료.
 void GraphDog::completeCommand(float dt){
 #if COCOS2D_VERSION<0x00020000
@@ -319,32 +368,88 @@ void GraphDog::completeCommand(float dt){
     gdchunk.memory = (char*)malloc(1);
     gdchunk.size = 0;
 }
+=======
+
+>>>>>>> master-piece
 
 //실패
-void GraphDog::faildCommand(float dt){
-#if COCOS2D_VERSION<0x00020000
-	CCScheduler::sharedScheduler()->unscheduleSelector(schedule_selector(GraphDog::faildCommand), this);
-#endif
-    GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
-    JsonBox::Object resultobj;
-    resultobj["state"]=JsonBox::Value("error");
-    resultobj["errorMsg"]=JsonBox::Value("check your network state");
-    resultobj["errorCode"]=JsonBox::Value(1002);
-	//callbackparam
-    if(command.paramStr!=""){
-        JsonBox::Object param =  GraphDogLib::StringToJsonObject(command.paramStr);
-        resultobj["param"]=JsonBox::Value(param);
-    }
-    if(command.target!=0 && command.selector!=0)((command.target)->*(command.selector))(resultobj);
-    
-    //명령을 삭제한다.
-    GDDelegator::getInstance()->removeCommand();
-    
-    //메모리도 해제
-    if(gdchunk.memory)free(gdchunk.memory);
-    //메모리다시 할당받는다 (= t_function에 다시 돌아라는 신호를 준다.)
-    gdchunk.memory = (char*)malloc(1);
-    gdchunk.size = 0;
+//void GraphDog::faildCommand(float dt){
+//#if COCOS2D_VERSION<0x00020000
+//	CCScheduler::sharedScheduler()->unscheduleSelector(schedule_selector(GraphDog::faildCommand), this);
+//#endif
+//    GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
+//    JsonBox::Object resultobj;
+//    resultobj["state"]=JsonBox::Value("error");
+//    resultobj["errorMsg"]=JsonBox::Value("check your network state");
+//    resultobj["errorCode"]=JsonBox::Value(1002);
+//	//callbackparam
+//    if(command.paramStr!=""){
+//        JsonBox::Object param =  GraphDogLib::StringToJsonObject(command.paramStr);
+//        resultobj["param"]=JsonBox::Value(param);
+//    }
+//    if(command.target!=0 && command.selector!=0)((command.target)->*(command.selector))(resultobj);
+//    
+//    //명령을 삭제한다.
+//    GDDelegator::getInstance()->removeCommand();
+//    
+//    //메모리도 해제
+//    if(gdchunk.memory)free(gdchunk.memory);
+//    //메모리다시 할당받는다 (= t_function에 다시 돌아라는 신호를 준다.)
+//    gdchunk.memory = (char*)malloc(1);
+//    gdchunk.size = 0;
+//}
+void GraphDog::receivedCommand(float dt)
+{
+//	pthread_mutex_lock(&cmdsMutex);
+	for(std::map<int, CommandType>::iterator iter = commands.begin(); iter != commands.end();)
+	{
+		string resultStr = iter->second.paramStr;
+		CommandType command = iter->second;
+		
+		try {
+			if(command.chunk.resultCode == CURLE_AGAIN || command.chunk.resultCode != CURLE_OK)
+			{
+				throw command.chunk.resultCode;
+			}
+			
+			CCLog("%s", resultStr.c_str());
+			JsonBox::Object resultobj =  command.result; //GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
+			resultobj["resultString"]=JsonBox::Value(resultStr);
+			
+			//결과를 지정한 target,selector 으로 넘긴다.
+			if(command.target!=0 && command.selector!=0)
+				((command.target)->*(command.selector))(resultobj);
+			
+			//메모리도 해제
+			if(command.chunk.memory)
+				free(command.chunk.memory);
+			
+			//명령을 삭제한다.
+			commands.erase(iter++);
+			
+		} catch (const CURLcode& resultCode) {
+			if(resultCode == CURLE_AGAIN)
+			{
+				++iter;
+			}
+			else if(resultCode != CURLE_OK)
+			{
+				JsonBox::Object resultobj;
+				resultobj["state"]=JsonBox::Value("error");
+				resultobj["errorMsg"]=JsonBox::Value("check your network state");
+				resultobj["errorCode"]=JsonBox::Value(1002);
+				//callbackparam
+				if(command.paramStr!=""){
+					JsonBox::Object param =  GraphDogLib::StringToJsonObject(command.paramStr);
+					resultobj["param"]=JsonBox::Value(param);
+				}
+				if(command.target!=0 && command.selector!=0)((command.target)->*(command.selector))(resultobj);
+				commands.erase(iter++);
+				if(command.chunk.memory)
+					free(command.chunk.memory);
+			}
+		}
+	}
+//	pthread_mutex_unlock(&cmdsMutex);
 }
-
 GraphDog* graphdog = GraphDog::get();

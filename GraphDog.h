@@ -13,15 +13,36 @@
 #include "GDLib.h"
 #include "curl/curl.h"
 #include <stdlib.h>
+#include <queue>
+#include <list>
 #define GRAPHDOG_VERSION    "0.9"
 struct GDStruct {
     char *memory;
     size_t size;
+	CURLcode resultCode;
 };
 
 
+struct AutoIncrease
+{
+	static int cnt;
+	static int get(){return cnt++;}
+};
+
 class GraphDog: public CCObject{
 public:
+	struct CommandType
+	{
+		CCObject* target;
+		GDSelType selector;
+        string url;
+        string paramStr;
+		GraphDog* caller;
+		GDStruct chunk;
+		string action;
+		JsonBox::Object result;
+	};
+	std::map<int, CommandType> commands;
     static GraphDog* get()
 	{
 		static GraphDog* _ins = 0;
@@ -29,7 +50,7 @@ public:
 			_ins = new GraphDog();
 		return _ins;
 	}
-    
+    void removeCommand(cocos2d::CCObject *target);
     //시작설정
     void setup(string appID,string secretKey,string deviceId);
     //명령날리기 - 이 함수로 모든 통신을 할수있다. 쓰레드생성 실패시 false 그외 true
@@ -40,8 +61,6 @@ public:
     void setFlag(string flag);
     //이메일저장
     void setEmail(string email);
-	// 딜리게이터 삭제
-	void removeCommand(CCObject* target);
     //언어저장
     void setLanguage(string lang);
     
@@ -54,11 +73,14 @@ public:
     
     bool isLogin;
 private:
-    GDStruct gdchunk;
+//    GDStruct gdchunk;
+	pthread_mutex_t t_functionMutex;
+//	pthread_mutex_t cmdsMutex;
+//	pthread_mutex_t authMutex;
     string aID;
     string sKey;
     string udid;
-    bool isRun;
+
     CURL* getCURL();
     string getToken();
     string getUdid();
@@ -71,17 +93,24 @@ private:
     CURL *curl_handle;
     static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static void* t_function(void *data);
-    void completeCommand(float dt);
-    void faildCommand(float dt);
+    void receivedCommand(float dt);
+
     GraphDog(){
+		pthread_mutex_init(&t_functionMutex, NULL);
+//		pthread_mutex_init(&cmdsMutex, NULL);
+		//pthread_mutex_lock(&authMutex);
         curl_global_init(CURL_GLOBAL_ALL);
         curl_handle = curl_easy_init();
         curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, true);
         curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "GraphDog-agent/1.0");
         curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, true);
         curl_easy_setopt(curl_handle, CURLOPT_COOKIEJAR,"sessid");
-        
-        isRun=false;
+		curl_easy_setopt(curl_handle, CURLOPT_URL, "http://www.graphdog.net/command/");
+		curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+		curl_easy_setopt(curl_handle, CURLOPT_POST, true);
+		curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 10 );
+        // 인증 mutex lock //##
+
         isLogin=false;
         errorCount=0;
     }
