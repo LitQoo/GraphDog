@@ -51,8 +51,14 @@ public:
 		return _ins;
 	}
     void removeCommand(cocos2d::CCObject *target);
+	
+	std::string getDeviceID();
+	void setPackageName(string pkg)
+	{
+		packageName = pkg;
+	}
     //시작설정
-    void setup(string appID,string secretKey,string deviceId);
+    void setup(string appID,string secretKey);
     //명령날리기 - 이 함수로 모든 통신을 할수있다. 쓰레드생성 실패시 false 그외 true
     bool command(string action, const JsonBox::Object* const param,CCObject *target,GDSelType selector);
     //닉네임저장
@@ -80,7 +86,7 @@ private:
     string aID;
     string sKey;
     string udid;
-
+	string packageName;
     CURL* getCURL();
     string getToken();
     string getUdid();
@@ -109,7 +115,6 @@ private:
 		curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 		curl_easy_setopt(curl_handle, CURLOPT_POST, true);
 		curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 10 );
-        // 인증 mutex lock //##
 
         isLogin=false;
         errorCount=0;

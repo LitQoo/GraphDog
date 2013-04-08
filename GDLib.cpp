@@ -1,5 +1,7 @@
 #include "GDLib.h"
 #include <sstream>
+
+
 namespace GraphDogLib {
     
 BYTE    mask[8] = {0x80,0x40,0x20,0x10,0x08,0x04,0x02,0x1};
@@ -552,54 +554,6 @@ JsonBox::Object StringToJsonObject(string _str){
     return resultobj;
 }
     
-std::string getDeviceID() {
-    string _id;
-    
-    #if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
-    
-    
 
-    char* macAddress=(char*)malloc(18);
-        std::string ifName="en0";
-        int  success;
-        struct ifaddrs * addrs;
-        struct ifaddrs * cursor;
-        const struct sockaddr_dl * dlAddr;
-        const unsigned char* base;
-        int i;
-    
-        success = getifaddrs(&addrs) == 0;
-        if (success) {
-            cursor = addrs;
-            while (cursor != 0) {
-                if ( (cursor->ifa_addr->sa_family == AF_LINK)
-                    && (((const struct sockaddr_dl *) cursor->ifa_addr)->sdl_type == 0x06) && strcmp(ifName.c_str(),  cursor->ifa_name)==0 ) {
-                    dlAddr = (const struct sockaddr_dl *) cursor->ifa_addr;
-                    base = (const unsigned char*) &dlAddr->sdl_data[dlAddr->sdl_nlen];
-                    strcpy(macAddress, "");
-                    for (i = 0; i < dlAddr->sdl_alen; i++) {
-                        if (i != 0) {
-                            strcat(macAddress, ":");
-                        }
-                        char partialAddr[3];
-                        sprintf(partialAddr, "%02X", base[i]);
-                        strcat(macAddress, partialAddr);
-    
-                    }
-                }
-                cursor = cursor->ifa_next;
-            }
-    
-            freeifaddrs(addrs);
-        }
-    _id = macAddress;
-#else
-    
-    //_id=NULL; //##
-#endif
-    //string _id = base64_decode(macAddress);
-    
-    return base64_encode(_id.c_str(), _id.length());// _id;
-}
     
 }

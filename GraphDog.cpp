@@ -6,7 +6,12 @@
 #include "GraphDog.h"
 #include <sstream>
 #include <unistd.h>
+#include "JNIKelper.h"
 
+#if CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
+#include "jni.h"
+#include "android/jni/JniHelper.h"
+#endif
 
 int AutoIncrease::cnt = 0;
 size_t GraphDog::WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp){
@@ -29,7 +34,9 @@ size_t GraphDog::WriteMemoryCallback(void *contents, size_t size, size_t nmemb, 
 void GraphDog::setUdid(string _id){
     udid=_id;
 }
-void GraphDog::setup(string appID,string secretKey,string deviceId){
+
+void GraphDog::setup(string appID,string secretKey){
+	string deviceId = getDeviceID();
     aID=appID;
     sKey=secretKey;
     this->setUdid(deviceId);
@@ -135,6 +142,7 @@ CURL* GraphDog::getCURL(){
 
 bool GraphDog::command(string action, const JsonBox::Object* const param,CCObject *target,GDSelType selector){
     
+	CCLog("action seq : %s", action.c_str());
     string udid=getUdid();
     string email=getEmail();
     string auid=getAuID();
@@ -298,79 +306,7 @@ void GraphDog::removeCommand(cocos2d::CCObject *target)
 //	pthread_mutex_unlock(&cmdsMutex);
 }
 
-<<<<<<< HEAD
-//명령수행완료.
-void GraphDog::completeCommand(float dt){
-#if COCOS2D_VERSION<0x00020000
-	CCScheduler::sharedScheduler()->unscheduleSelector(schedule_selector(GraphDog::completeCommand), this);
-    //명령문자열받기
-#endif
-    
-    bool commandExec = true;
-    string resultStr = gdchunk.memory;
-    GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
-    
-    //명령문자열 json::object 로 변환
-	CCLog("%s", resultStr.c_str());
-    JsonBox::Object resultobj = GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
-    resultobj["resultString"]=JsonBox::Value(resultStr);
-    
-    //callbackparam
-    if(command.paramStr!=""){
-        JsonBox::Object param =  GraphDogLib::StringToJsonObject(command.paramStr);
-        resultobj["param"]=JsonBox::Value(param);
-    } 
-    
-    // 새토큰발급일 경우
-    if(resultobj["tokenUpdate"].getString()=="ok"){
-        //정상결과시 AuID,Token 다시 세팅
-        if(resultobj["state"].getString()=="ok"){
-            setAuID(resultobj["auID"].getString());
-            setCTime(resultobj["createTime"].getString());
-            isLogin=true;
-            CCLog("tokenUpdate");
-        }else{
-            setCTime("9999");
-        }
-        
-        //첫실행일경우 받아온 nick,flag 저장.
-        if(resultobj["isFirst"].getBoolean()==true){
-            setNick(resultobj["nick"].getString());
-            setFlag(resultobj["flag"].getString());
-        }
-        //기존명령 다시 등록
-        GDDelegator::getInstance()->addCommandAtFirst(command.target, command.selector, command.url);
-        commandExec=false;
-    }
-    
-    if(resultobj["errorcode"].getInt()==9999){
-        setCTime("9999");
-        CCLog("auth error");
-        errorCount++;
-        if(errorCount<5){
-            GDDelegator::getInstance()->addCommandAtFirst(command.target, command.selector, command.url);
-            commandExec=false;
-        }
-    }
-    
-    if(resultobj["state"].getString()=="ok"){
-        errorCount=0;
-    }
-    
-    //결과를 지정한 target,selector 으로 넘긴다.
-    if(commandExec && command.target!=0 && command.selector!=0)((command.target)->*(command.selector))(resultobj);
-    
-    //명령을 삭제한다.
-    GDDelegator::getInstance()->removeCommand();
-    //메모리도 해제
-    if(gdchunk.memory)free(gdchunk.memory);
-    //메모리다시 할당받는다 (= t_function에 다시 돌아라는 신호를 준다.)
-    gdchunk.memory = (char*)malloc(1);
-    gdchunk.size = 0;
-}
-=======
 
->>>>>>> master-piece
 
 //실패
 //void GraphDog::faildCommand(float dt){
@@ -412,7 +348,7 @@ void GraphDog::receivedCommand(float dt)
 				throw command.chunk.resultCode;
 			}
 			
-			CCLog("%s", resultStr.c_str());
+			CCLog("%", resultStr.c_str());
 			JsonBox::Object resultobj =  command.result; //GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
 			resultobj["resultString"]=JsonBox::Value(resultStr);
 			
@@ -452,4 +388,82 @@ void GraphDog::receivedCommand(float dt)
 	}
 //	pthread_mutex_unlock(&cmdsMutex);
 }
+std::string GraphDog::getDeviceID() {
+    string _id;
+    
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+    char* macAddress=(char*)malloc(18);
+	std::string ifName="en0";
+	int  success;
+	struct ifaddrs * addrs;
+	struct ifaddrs * cursor;
+	const struct sockaddr_dl * dlAddr;
+	const unsigned char* base;
+	int i;
+    
+	success = getifaddrs(&addrs) == 0;
+	if (success) {
+		cursor = addrs;
+		while (cursor != 0) {
+			if ( (cursor->ifa_addr->sa_family == AF_LINK)
+				&& (((const struct sockaddr_dl *) cursor->ifa_addr)->sdl_type == 0x06) && strcmp(ifName.c_str(),  cursor->ifa_name)==0 ) {
+				dlAddr = (const struct sockaddr_dl *) cursor->ifa_addr;
+				base = (const unsigned char*) &dlAddr->sdl_data[dlAddr->sdl_nlen];
+				strcpy(macAddress, "");
+				for (i = 0; i < dlAddr->sdl_alen; i++) {
+					if (i != 0) {
+						strcat(macAddress, ":");
+					}
+					char partialAddr[3];
+					sprintf(partialAddr, "%02X", base[i]);
+					strcat(macAddress, partialAddr);
+					
+				}
+			}
+			cursor = cursor->ifa_next;
+		}
+		
+		freeifaddrs(addrs);
+	}
+    _id = macAddress;
+#elif CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
+	//_id = JNIKelper::getInstance()->callJava_getUDID();
+	JniMethodInfo minfo;
+	jobject jobj;
+	
+	if(JniHelper::getStaticMethodInfo(minfo, packageName.c_str(), "getActivity", "()Ljava/lang/Object;"))
+	{
+		jobj = minfo.env->NewGlobalRef(minfo.env->CallStaticObjectMethod(minfo.classID, minfo.methodID));
+		CCLog("%x", jobj);
+		JniMethodInfo __minfo;
+		__minfo.classID = 0;
+		__minfo.env = 0;
+		__minfo.methodID = 0;
+		
+		CCLog("!!!!");
+		if(JniHelper::getMethodInfo(__minfo, packageName.c_str(), "getUDID", "()Ljava/lang/String;"))
+		{
+			jstring jstrTitle = (jstring) __minfo.env->CallObjectMethod(jobj, __minfo.methodID);
+			
+			if(jstrTitle)
+			{
+				char* pszTitle = (char*)__minfo.env->GetStringUTFChars(jstrTitle, JNI_FALSE);
+				
+				_id = pszTitle;
+				__minfo.env->ReleaseStringUTFChars(jstrTitle, pszTitle);
+				__minfo.env->DeleteLocalRef(jstrTitle);
+				
+			}
+			__minfo.env->DeleteLocalRef(__minfo.classID);
+		}
+		
+		minfo.env->DeleteGlobalRef(jobj);
+		minfo.env->DeleteLocalRef(minfo.classID);
+	}
+#endif
+    //string _id = base64_decode(macAddress);
+    return GraphDogLib::base64_encode(_id.c_str(), _id.length());// _id;
+}
+
+
 GraphDog* graphdog = GraphDog::get();
