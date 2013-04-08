@@ -1,6 +1,6 @@
 //
 //  Created by LitQoo on 13. 2. 14..
-//  www.graphdog.com
+//  www.graphdog.net
 //
 
 #include "GraphDog.h"
@@ -200,6 +200,7 @@ bool GraphDog::command(string action, const JsonBox::Object* const param,CCObjec
 }
 
 //쓰레드펑션
+<<<<<<< HEAD
 void* GraphDog::t_function(void *_insertIndex)
 {	
 	int insertIndex = (int)_insertIndex;
@@ -289,6 +290,75 @@ void* GraphDog::t_function(void *_insertIndex)
 	pthread_mutex_unlock(&command.caller->t_functionMutex);
 	
 	return NULL;
+=======
+void* GraphDog::t_function(void *data)
+{
+    //메모리할당
+    GraphDog::get()->gdchunk.memory = (char*)malloc(1);
+    GraphDog::get()->gdchunk.size = 0;
+    
+    //GDDelegator 에 들어있는 명령을 순차적으로 수행한다.
+    while (1) {
+		if(GDDelegator::getInstance()->getCommandCount()<=0)	break;
+        GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
+        
+        string token=GraphDog::get()->getToken();
+        string paramStr=GraphDogLib::base64_encode(command.paramStr.c_str(),command.paramStr.length());
+        command.url=command.url.append("&token=");
+        command.url=command.url.append(token);
+        command.url=command.url.append("&param=");
+        command.url=command.url.append(paramStr);
+        command.url=command.url.append("&version=");
+        command.url=command.url.append(GRAPHDOG_VERSION);
+        
+        
+        // << "&param=" << paramStr
+        //curl으로 명령을 날리고 겨로가를 얻는다.
+        CURL *handle = GraphDog::get()->getCURL();
+        curl_easy_setopt(handle, CURLOPT_URL, "http://www.graphdog.net/command/");
+        curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+        curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, true);
+        curl_easy_setopt(handle, CURLOPT_POST, true);
+        curl_easy_setopt(handle, CURLOPT_TIMEOUT, 10);
+        curl_easy_setopt(handle, CURLOPT_POSTFIELDS,command.url.c_str());
+		
+        curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)&GraphDog::get()->gdchunk);
+        CURLcode resultCode = curl_easy_perform(handle);
+        
+        if(resultCode!=CURLE_OK || GraphDog::get()->gdchunk.size==0){
+           //실패시처리해주기
+            GraphDog::get()->gdchunk.size=1;
+#if COCOS2D_VERSION<0x00020000
+            // in cocos2d-x 1.x
+            CCScheduler::sharedScheduler()->scheduleSelector(schedule_selector(GraphDog::faildCommand), GraphDog::get(), 0,false);
+#else
+            // in cocos2d-x 2.x
+            CCDirector::sharedDirector()->getScheduler()->scheduleSelector(schedule_selector(GraphDog::faildCommand), GraphDog::get(), 0, false, 0, 0);
+#endif
+        }else{
+        //완료되면 GL쓰레드로 넘어간다.
+#if COCOS2D_VERSION<0x00020000
+        // in cocos2d-x 1.x
+        CCScheduler::sharedScheduler()->scheduleSelector(schedule_selector(GraphDog::completeCommand), GraphDog::get(), 0, false);
+#else
+        // in cocos2d-x 2.x
+        CCDirector::sharedDirector()->getScheduler()->scheduleSelector(schedule_selector(GraphDog::completeCommand), GraphDog::get(), 0, false, 0, 0);
+#endif
+        }
+        //GL쓰레드에서 자료를 처리할때까지 기다린다.
+        while (GraphDog::get()->gdchunk.size!=0) {
+            usleep(10000);
+        }
+        
+        //명령이 더이상 없으면 종료.
+        if(GDDelegator::getInstance()->getCommandCount()<=0)break;
+    }
+    //메모리해제
+    if(GraphDog::get()->gdchunk.memory)free(GraphDog::get()->gdchunk.memory);
+    GraphDog::get()->isRun=false;
+    pthread_exit(NULL);
+    return NULL;
+>>>>>>> com to net
 }
 
 void GraphDog::removeCommand(cocos2d::CCObject *target)
