@@ -78,6 +78,8 @@ public:
     string getEmail();
     
     bool isLogin;
+	
+	std::string	getDeviceInfo();
 private:
 //    GDStruct gdchunk;
 	pthread_mutex_t t_functionMutex;

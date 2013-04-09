@@ -1,7 +1,6 @@
 #include "GDLib.h"
 #include <sstream>
 
-
 namespace GraphDogLib {
     
 BYTE    mask[8] = {0x80,0x40,0x20,0x10,0x08,0x04,0x02,0x1};
@@ -553,7 +552,9 @@ JsonBox::Object StringToJsonObject(string _str){
     JsonBox::Object resultobj = result.getObject();
     return resultobj;
 }
-    
+
+	
+	
 
     
 }

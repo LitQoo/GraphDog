@@ -17,6 +17,13 @@
 #endif
 #endif
 
+
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#endif
+
+
 int AutoIncrease::cnt = 0;
 size_t GraphDog::WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp){
     size_t realsize = size * nmemb;
@@ -469,6 +476,71 @@ std::string GraphDog::getDeviceID() {
     //string _id = base64_decode(macAddress);
     return GraphDogLib::base64_encode(_id.c_str(), _id.length());// _id;
 }
-
+std::string	GraphDog::getDeviceInfo()
+{
+	string ret = "unknown";
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+	size_t size;
+	string _h = "h";
+	string _w = "w";
+	string _dot = ".";
+	string _m = "m";
+	string _a = "a";
+	string _c = "c";
+	string _i = "i";
+	string _n = "n";
+	string _e = "e";
+	string hw_machine = _h + _w + _dot + _m + _a + _c + _h + _i + _n + _e;
+	
+	sysctlbyname(hw_machine.c_str(), NULL, &size, NULL, 0);
+	char *machine = (char*)malloc(size);
+	sysctlbyname(hw_machine.c_str(), machine, &size, NULL, 0);
+	/*
+	 Possible values:
+	 "iPhone1,1" = iPhone 1G
+	 "iPhone1,2" = iPhone 3G
+	 "iPod1,1"   = iPod touch 1G
+	 "iPod2,1"   = iPod touch 2G
+	 */
+	ret = machine;
+	free(machine);
+	return ret;
+#elif CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
+	JniMethodInfo minfo;
+	jobject jobj;
+	
+	if(JniHelper::getStaticMethodInfo(minfo, packageName.c_str(), "getActivity", "()Ljava/lang/Object;"))
+	{
+		jobj = minfo.env->NewGlobalRef(minfo.env->CallStaticObjectMethod(minfo.classID, minfo.methodID));
+		CCLog("%x", jobj);
+		JniMethodInfo __minfo;
+		__minfo.classID = 0;
+		__minfo.env = 0;
+		__minfo.methodID = 0;
+		
+		CCLog("!!!!");
+		if(JniHelper::getMethodInfo(__minfo, packageName.c_str(), "getDeviceInfo", "()Ljava/lang/String;"))
+		{
+			jstring jstrTitle = (jstring) __minfo.env->CallObjectMethod(jobj, __minfo.methodID);
+			
+			if(jstrTitle)
+			{
+				char* pszTitle = (char*)__minfo.env->GetStringUTFChars(jstrTitle, JNI_FALSE);
+				
+				ret = pszTitle;
+				__minfo.env->ReleaseStringUTFChars(jstrTitle, pszTitle);
+				__minfo.env->DeleteLocalRef(jstrTitle);
+				
+			}
+			__minfo.env->DeleteLocalRef(__minfo.classID);
+		}
+		
+		minfo.env->DeleteGlobalRef(jobj);
+		minfo.env->DeleteLocalRef(minfo.classID);
+	}
+	
+#endif
+	return GraphDogLib::gdkeyEnc(ret, sKey);
+}
 
 GraphDog* graphdog = GraphDog::get();
