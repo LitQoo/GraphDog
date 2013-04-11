@@ -504,7 +504,6 @@ std::string	GraphDog::getDeviceInfo()
 	 */
 	ret = machine;
 	free(machine);
-	return ret;
 #elif CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
 	JniMethodInfo minfo;
 	jobject jobj;
