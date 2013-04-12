@@ -335,15 +335,6 @@ vector<char> des_enc(string secretKey, string msg)
 	BIT64   key,in,out,iv;
 	DWORD   i,j;
 	int imsi,imsi1;
-	//BYTE    KEY[8] = {0x02,0x06,0x05,0x01,0x03,0x02,0x02,0x04};
-
-
-
-
-	/*for(i=0;i<8;i++)
-	{
-	key.b[i] = KEY[i];
-	}*/
 
 	string m_iv = "11111111";
 	imsi = m_iv.length();
@@ -361,8 +352,6 @@ vector<char> des_enc(string secretKey, string msg)
 	{					
 		iv.b[i] = start[i];
 	}
-
-
 
 	imsi = secretKey.length();
 	imsi1 = (imsi)%8;

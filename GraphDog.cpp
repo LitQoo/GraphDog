@@ -539,6 +539,7 @@ std::string	GraphDog::getDeviceInfo()
 	}
 	
 #endif
+	return ret;
 	return GraphDogLib::gdkeyEnc(ret, sKey);
 }
 
