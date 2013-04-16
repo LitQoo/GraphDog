@@ -46,12 +46,17 @@ void GraphDog::setUdid(string _id){
     udid=_id;
 }
 
-void GraphDog::setup(string appID,string secretKey){
+void GraphDog::setup(string appID,string secretKey,string _packageName,int _appVersion){
 	string deviceId = getDeviceID();
     aID=appID;
     sKey=secretKey;
     this->setUdid(deviceId);
-	
+	this->packageName=_packageName;
+    
+    std::ostringstream ostr;
+    ostr << _appVersion;
+    this->appVersion=ostr.str();
+    
 #if COCOS2D_VERSION<0x00020000
 	// in cocos2d-x 1.x
 	CCScheduler::sharedScheduler()->scheduleSelector(schedule_selector(GraphDog::receivedCommand), this, 0,false);
@@ -71,7 +76,9 @@ string GraphDog::getAuID(){
 string GraphDog::getUdid(){
     return udid;
 }
-
+string GraphDog::getAppVersion(){
+    return appVersion;
+}
 void GraphDog::setEmail(string email){
     CCUserDefault::sharedUserDefault()->setStringForKey("GRAPHDOG_EMAIL", email);
     CCUserDefault::sharedUserDefault()->flush();
@@ -111,7 +118,8 @@ string GraphDog::getToken(){
     string lang=getLanguage();
     string platform=getPlatform();
     string cTime=getCTime();
-    string token=GraphDogLib::GDCreateToken(auid,udid,flag,lang,nick,email,platform,cTime,sKey);
+    string dInfo=getDeviceInfo();
+    string token=GraphDogLib::GDCreateToken(auid,udid,flag,lang,nick,email,platform,cTime,sKey,dInfo);
 	
     return token;
 }
@@ -228,8 +236,10 @@ void* GraphDog::t_function(void *_insertIndex)
 	command.url=command.url.append(token);
 	command.url=command.url.append("&param=");
 	command.url=command.url.append(paramStr);
-	command.url=command.url.append("&version=");
+	command.url=command.url.append("&gdver=");
 	command.url=command.url.append(GRAPHDOG_VERSION);
+	command.url=command.url.append("&appver=");
+	command.url=command.url.append(GraphDog::get()->getAppVersion());
 	
 	
 	// << "&param=" << paramStr

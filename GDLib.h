@@ -50,7 +50,7 @@ namespace GraphDogLib {
     std::string gdkeyEnc(const std::string& msg,string key);
 
 
-    std::string GDCreateToken(string auID,string udid,string flag,string lang,string nick,string email,string platform,string cTime,string secretKey);
+    std::string GDCreateToken(string auID,string udid,string flag,string lang,string nick,string email,string platform,string cTime,string secretKey,string dInfo);
     
     
     void replaceString( std::string & strCallId, const char * pszBefore, const char * pszAfter );

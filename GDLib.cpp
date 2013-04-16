@@ -494,7 +494,7 @@ std::string gdkeyEnc(const std::string& msg,string key)
 	return base64_encode(&desed[0], desed.size());
 }
 
-std::string GDCreateToken(string auID,string udid,string flag,string lang,string nick,string email,string platform,string cTime,string secretKey){
+std::string GDCreateToken(string auID,string udid,string flag,string lang,string nick,string email,string platform,string cTime,string secretKey,string dInfo){
     string msg = auID;
     msg.append("||");
     msg.append(udid);
@@ -510,6 +510,8 @@ std::string GDCreateToken(string auID,string udid,string flag,string lang,string
     msg.append(platform);
     msg.append("||");
     msg.append(cTime);
+    msg.append("||");
+    msg.append(dInfo);
     msg.append("||");
     
     vector<char> desed = des_enc(secretKey, msg);

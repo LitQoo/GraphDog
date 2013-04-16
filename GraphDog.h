@@ -53,12 +53,8 @@ public:
     void removeCommand(cocos2d::CCObject *target);
 	
 	std::string getDeviceID();
-	void setPackageName(string pkg)
-	{
-		packageName = pkg;
-	}
     //시작설정
-    void setup(string appID,string secretKey);
+    void setup(string appID,string secretKey,string _packageName,int _appVersion);
     //명령날리기 - 이 함수로 모든 통신을 할수있다. 쓰레드생성 실패시 false 그외 true
     bool command(string action, const JsonBox::Object* const param,CCObject *target,GDSelType selector);
     //닉네임저장
@@ -76,7 +72,7 @@ public:
     string getLanguage();
     string getPlatform();
     string getEmail();
-    
+    string getAppVersion();
     bool isLogin;
 	
 	std::string	getDeviceInfo();
@@ -89,6 +85,7 @@ private:
     string sKey;
     string udid;
 	string packageName;
+    string appVersion;
     CURL* getCURL();
     string getToken();
     string getUdid();
