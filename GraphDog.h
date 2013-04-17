@@ -31,28 +31,6 @@ struct AutoIncrease
 
 class GraphDog: public CCObject{
 public:
-	struct CommandType
-	{
-		CCObject* target;
-		GDSelType selector;
-        string commandStr;
-        string paramStr;
-		GraphDog* caller;
-		GDStruct chunk;
-		string action;
-		JsonBox::Object result;
-	};
-	std::map<int, CommandType> commands;
-    static GraphDog* get()
-	{
-		static GraphDog* _ins = 0;
-		if(_ins == 0)
-			_ins = new GraphDog();
-		return _ins;
-	}
-    void removeCommand(cocos2d::CCObject *target);
-	
-	std::string getDeviceID();
     //시작설정
     void setup(string appID,string secretKey,string _packageName,int _appVersion);
     //명령날리기 - 이 함수로 모든 통신을 할수있다. 쓰레드생성 실패시 false 그외 true
@@ -66,6 +44,11 @@ public:
     //언어저장
     void setLanguage(string lang);
     
+    //graphdog 버전설정 - 평소엔 필요없음
+    void setGraphDogVersion(int version);
+    
+    bool isLogin;
+    
     string getNick();
     string getFlag();
     string getAuID();
@@ -74,11 +57,32 @@ public:
     string getEmail();
     int getAppVersion();
     string getAppVersionString();
-    bool isLogin;
-	
-    void setGraphDogVersion(int version);
-    string getGraphDogVersion();
-	std::string	getDeviceInfo();
+	string getGraphDogVersion();
+	string getDeviceID();
+    string getDeviceInfo();
+    
+    static GraphDog* get()
+	{
+		static GraphDog* _ins = 0;
+		if(_ins == 0)
+			_ins = new GraphDog();
+		return _ins;
+	}
+    
+    struct CommandType
+	{
+		CCObject* target;
+		GDSelType selector;
+        string commandStr;
+        string paramStr;
+		GraphDog* caller;
+		GDStruct chunk;
+		string action;
+		JsonBox::Object result;
+	};
+	std::map<int, CommandType> commands;
+    void removeCommand(cocos2d::CCObject *target);
+
 private:
 //    GDStruct gdchunk;
 	pthread_mutex_t t_functionMutex;
