@@ -76,6 +76,8 @@ public:
     string getAppVersionString();
     bool isLogin;
 	
+    void setGraphDogVersion(int version);
+    string getGraphDogVersion();
 	std::string	getDeviceInfo();
 private:
 //    GDStruct gdchunk;
@@ -95,7 +97,7 @@ private:
     void setAuID(string appuserID);
     void setUdid(string _id);
     void setCTime(string cTime);
-    
+    string gdVersion;
     CURL *curl_handle;
     static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static void* t_function(void *data);
@@ -117,6 +119,7 @@ private:
 
         isLogin=false;
         errorCount=0;
+        this->gdVersion = GRAPHDOG_VERSION;
     }
     
     ~GraphDog(){

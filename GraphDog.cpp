@@ -47,6 +47,16 @@ void GraphDog::setUdid(string _id){
     udid=_id;
 }
 
+void GraphDog::setGraphDogVersion(int version){
+    std::ostringstream ostr;
+    ostr << version;
+    this->gdVersion=ostr.str();
+}
+
+string GraphDog::getGraphDogVersion(){
+    return this->gdVersion;
+}
+
 void GraphDog::setup(string appID,string secretKey,string _packageName,int _appVersion){
 	string deviceId = getDeviceID();
     aID=appID;
@@ -242,7 +252,7 @@ void* GraphDog::t_function(void *_insertIndex)
 	command.commandStr=command.commandStr.append(GraphDog::get()->getAppVersionString());
 	
     string commandurl = "http://www.graphdog.net/command/";
-    commandurl=commandurl.append(GRAPHDOG_VERSION);
+    commandurl=commandurl.append(GraphDog::get()->getGraphDogVersion());
     commandurl=commandurl.append("/");
     commandurl=commandurl.append(GraphDog::get()->aID);
     commandurl=commandurl.append("/");
