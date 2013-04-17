@@ -6,8 +6,8 @@
 //
 //
 
-#ifndef __archervszombie__GraphDog__
-#define __archervszombie__GraphDog__
+#ifndef __litqoo__GraphDog__
+#define __litqoo__GraphDog__
 
 #include <iostream>
 #include "GDLib.h"
@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <queue>
 #include <list>
-#define GRAPHDOG_VERSION    "0.9"
+#define GRAPHDOG_VERSION    "1"
 struct GDStruct {
     char *memory;
     size_t size;
@@ -35,7 +35,7 @@ public:
 	{
 		CCObject* target;
 		GDSelType selector;
-        string url;
+        string commandStr;
         string paramStr;
 		GraphDog* caller;
 		GDStruct chunk;
@@ -72,7 +72,8 @@ public:
     string getLanguage();
     string getPlatform();
     string getEmail();
-    string getAppVersion();
+    int getAppVersion();
+    string getAppVersionString();
     bool isLogin;
 	
 	std::string	getDeviceInfo();
@@ -110,7 +111,6 @@ private:
         curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "GraphDog-agent/1.0");
         curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, true);
         curl_easy_setopt(curl_handle, CURLOPT_COOKIEJAR,"sessid");
-		curl_easy_setopt(curl_handle, CURLOPT_URL, "http://www.graphdog.net/command/");
 		curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 		curl_easy_setopt(curl_handle, CURLOPT_POST, true);
 		curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 10 );
@@ -126,4 +126,4 @@ private:
 };
 
 extern GraphDog* graphdog;
-#endif /* defined(__archervszombie__GraphDog__) */
+#endif /* defined(__litqoo__GraphDog__) */

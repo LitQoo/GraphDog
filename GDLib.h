@@ -1,5 +1,8 @@
 #pragma once
 
+#ifndef __litqoo__GraphDogLib__
+#define __litqoo__GraphDogLib__
+
 #include <vector>
 #include <string>
 #include "cocos2d.h"
@@ -58,10 +61,12 @@ namespace GraphDogLib {
     JsonBox::Object StringToJsonObject(string _str);
 }
 
-#pragma once
 using namespace cocos2d;
 using namespace std;
 typedef void (CCObject::*GDSelType)(JsonBox::Object);
 #define gd_selector(_SELECTOR) (GDSelType)(&_SELECTOR)
 
 
+#endif
+
+#pragma once

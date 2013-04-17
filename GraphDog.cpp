@@ -5,6 +5,7 @@
 
 #include "GraphDog.h"
 #include <sstream>
+#include <cstdlib>
 #include <unistd.h>
 #include "JNIKelper.h"
 
@@ -57,6 +58,8 @@ void GraphDog::setup(string appID,string secretKey,string _packageName,int _appV
     ostr << _appVersion;
     this->appVersion=ostr.str();
     
+
+    
 #if COCOS2D_VERSION<0x00020000
 	// in cocos2d-x 1.x
 	CCScheduler::sharedScheduler()->scheduleSelector(schedule_selector(GraphDog::receivedCommand), this, 0,false);
@@ -76,7 +79,10 @@ string GraphDog::getAuID(){
 string GraphDog::getUdid(){
     return udid;
 }
-string GraphDog::getAppVersion(){
+int GraphDog::getAppVersion(){
+    return atoi(appVersion.c_str());
+}
+string GraphDog::getAppVersionString(){
     return appVersion;
 }
 void GraphDog::setEmail(string email){
@@ -161,8 +167,7 @@ CURL* GraphDog::getCURL(){
 
 bool GraphDog::command(string action, const JsonBox::Object* const param,CCObject *target,GDSelType selector){
     
-	CCLog("action seq : %s", action.c_str());
-    string udid=getUdid();
+	string udid=getUdid();
     string email=getEmail();
     string auid=getAuID();
     string token;
@@ -180,13 +185,10 @@ bool GraphDog::command(string action, const JsonBox::Object* const param,CCObjec
     token=getToken();
     
     //HTTP  POST string 으로 조합.
-	
-	ostringstream url;
-	url << "action=" << action << "&aID=" << aID;
     
     //명령을 등록.
 	int insertIndex = AutoIncrease::get();
-	CommandType cmd = {target, selector, url.str(), paramStr, this, {(char*)malloc(1), 0, CURLE_AGAIN}, action};
+	CommandType cmd = {target, selector, "", paramStr, this, {(char*)malloc(1), 0, CURLE_AGAIN}, action};
 	commands[insertIndex] = cmd;
     //쓰레드가 돌고있지 않으면
     
@@ -232,20 +234,26 @@ void* GraphDog::t_function(void *_insertIndex)
 	string token=GraphDog::get()->getToken();
 
 	string paramStr=GraphDogLib::base64_encode(command.paramStr.c_str(), command.paramStr.length());
-	command.url=command.url.append("&token=");
-	command.url=command.url.append(token);
-	command.url=command.url.append("&param=");
-	command.url=command.url.append(paramStr);
-	command.url=command.url.append("&gdver=");
-	command.url=command.url.append(GRAPHDOG_VERSION);
-	command.url=command.url.append("&appver=");
-	command.url=command.url.append(GraphDog::get()->getAppVersion());
+	command.commandStr=command.commandStr.append("&token=");
+	command.commandStr=command.commandStr.append(token);
+	command.commandStr=command.commandStr.append("&param=");
+	command.commandStr=command.commandStr.append(paramStr);
+	command.commandStr=command.commandStr.append("&appver=");
+	command.commandStr=command.commandStr.append(GraphDog::get()->getAppVersionString());
 	
+    string commandurl = "http://www.graphdog.net/command/";
+    commandurl=commandurl.append(GRAPHDOG_VERSION);
+    commandurl=commandurl.append("/");
+    commandurl=commandurl.append(GraphDog::get()->aID);
+    commandurl=commandurl.append("/");
+    commandurl=commandurl.append(command.action);
+    
 	
 	// << "&param=" << paramStr
 	//curl으로 명령을 날리고 겨로가를 얻는다.
 	CURL *handle = GraphDog::get()->getCURL();
-	curl_easy_setopt(handle, CURLOPT_POSTFIELDS,command.url.c_str());
+    curl_easy_setopt(handle, CURLOPT_URL, commandurl.c_str());
+	curl_easy_setopt(handle, CURLOPT_POSTFIELDS,command.commandStr.c_str());
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)&command.chunk);
 	
 	//		curl_setopt($ch,CURLOPT_TIMEOUT,1000);
@@ -269,7 +277,6 @@ void* GraphDog::t_function(void *_insertIndex)
 			command.caller->setAuID(resultobj["auID"].getString());
 			command.caller->setCTime(resultobj["createTime"].getString());
 			command.caller->isLogin=true;
-			CCLog("tokenUpdate");
 		}else{
 			command.caller->setCTime("9999");
 		}
@@ -289,7 +296,6 @@ void* GraphDog::t_function(void *_insertIndex)
 	
 	if(resultobj["errorcode"].getInt()==9999){
 		command.caller->setCTime("9999");
-		CCLog("auth error");
 		command.caller->errorCount++;
 		if(command.caller->errorCount<5){
 			JsonBox::Value param;
@@ -328,33 +334,6 @@ void GraphDog::removeCommand(cocos2d::CCObject *target)
 }
 
 
-
-//실패
-//void GraphDog::faildCommand(float dt){
-//#if COCOS2D_VERSION<0x00020000
-//	CCScheduler::sharedScheduler()->unscheduleSelector(schedule_selector(GraphDog::faildCommand), this);
-//#endif
-//    GDDelegator::DeleSel command = GDDelegator::getInstance()->getCommand();
-//    JsonBox::Object resultobj;
-//    resultobj["state"]=JsonBox::Value("error");
-//    resultobj["errorMsg"]=JsonBox::Value("check your network state");
-//    resultobj["errorCode"]=JsonBox::Value(1002);
-//	//callbackparam
-//    if(command.paramStr!=""){
-//        JsonBox::Object param =  GraphDogLib::StringToJsonObject(command.paramStr);
-//        resultobj["param"]=JsonBox::Value(param);
-//    }
-//    if(command.target!=0 && command.selector!=0)((command.target)->*(command.selector))(resultobj);
-//    
-//    //명령을 삭제한다.
-//    GDDelegator::getInstance()->removeCommand();
-//    
-//    //메모리도 해제
-//    if(gdchunk.memory)free(gdchunk.memory);
-//    //메모리다시 할당받는다 (= t_function에 다시 돌아라는 신호를 준다.)
-//    gdchunk.memory = (char*)malloc(1);
-//    gdchunk.size = 0;
-//}
 void GraphDog::receivedCommand(float dt)
 {
 //	pthread_mutex_lock(&cmdsMutex);
@@ -369,7 +348,6 @@ void GraphDog::receivedCommand(float dt)
 				throw command.chunk.resultCode;
 			}
 			
-			CCLog("%", resultStr.c_str());
 			JsonBox::Object resultobj =  command.result; //GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
 			resultobj["resultString"]=JsonBox::Value(resultStr);
 			
@@ -455,13 +433,11 @@ std::string GraphDog::getDeviceID() {
 	if(JniHelper::getStaticMethodInfo(minfo, packageName.c_str(), "getActivity", "()Ljava/lang/Object;"))
 	{
 		jobj = minfo.env->NewGlobalRef(minfo.env->CallStaticObjectMethod(minfo.classID, minfo.methodID));
-		CCLog("%x", jobj);
 		JniMethodInfo __minfo;
 		__minfo.classID = 0;
 		__minfo.env = 0;
 		__minfo.methodID = 0;
 		
-		CCLog("!!!!");
 		if(JniHelper::getMethodInfo(__minfo, packageName.c_str(), "getUDID", "()Ljava/lang/String;"))
 		{
 			jstring jstrTitle = (jstring) __minfo.env->CallObjectMethod(jobj, __minfo.methodID);
@@ -505,13 +481,6 @@ std::string	GraphDog::getDeviceInfo()
 	sysctlbyname(hw_machine.c_str(), NULL, &size, NULL, 0);
 	char *machine = (char*)malloc(size);
 	sysctlbyname(hw_machine.c_str(), machine, &size, NULL, 0);
-	/*
-	 Possible values:
-	 "iPhone1,1" = iPhone 1G
-	 "iPhone1,2" = iPhone 3G
-	 "iPod1,1"   = iPod touch 1G
-	 "iPod2,1"   = iPod touch 2G
-	 */
 	ret = machine;
 	free(machine);
 #elif CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
@@ -521,13 +490,11 @@ std::string	GraphDog::getDeviceInfo()
 	if(JniHelper::getStaticMethodInfo(minfo, packageName.c_str(), "getActivity", "()Ljava/lang/Object;"))
 	{
 		jobj = minfo.env->NewGlobalRef(minfo.env->CallStaticObjectMethod(minfo.classID, minfo.methodID));
-		CCLog("%x", jobj);
 		JniMethodInfo __minfo;
 		__minfo.classID = 0;
 		__minfo.env = 0;
 		__minfo.methodID = 0;
 		
-		CCLog("!!!!");
 		if(JniHelper::getMethodInfo(__minfo, packageName.c_str(), "getDeviceInfo", "()Ljava/lang/String;"))
 		{
 			jstring jstrTitle = (jstring) __minfo.env->CallObjectMethod(jobj, __minfo.methodID);
