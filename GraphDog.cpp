@@ -24,9 +24,10 @@
 #include <sys/sysctl.h>
 #endif
 
-
+#include "KS_Util.h"
 int AutoIncrease::cnt = 0;
 size_t GraphDog::WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp){
+
     size_t realsize = size * nmemb;
     struct GDStruct *mem = (struct GDStruct *)userp;
     
@@ -174,36 +175,42 @@ CURL* GraphDog::getCURL(){
     return curl_handle;
 }
 
-
-bool GraphDog::command(string action, const JsonBox::Object* const param,CCObject *target,GDSelType selector){
-    
+bool GraphDog::command(const std::vector<CommandParam>& params)
+{
 	string udid=getUdid();
     string email=getEmail();
     string auid=getAuID();
     string token;
-    string paramStr="";
-    
-    //파라메터를 json string 으로 변환
-    if(param!=NULL){
-        ostringstream oss;
-        oss << *param;
-        paramStr = oss.str();
-		
-    }
-    
-    //저장되어있는 토큰불러오기. 없으면 생성
+	//저장되어있는 토큰불러오기. 없으면 생성
     token=getToken();
-    
-    //HTTP  POST string 으로 조합.
-    
-    //명령을 등록.
+	
 	int insertIndex = AutoIncrease::get();
-	CommandType cmd = {target, selector, "", paramStr, this, {(char*)malloc(1), 0, CURLE_AGAIN}, action};
-	commands[insertIndex] = cmd;
-    //쓰레드가 돌고있지 않으면
-    
-    //쓰레드돌리기
-
+	std::vector<CommandType> cmdCollect;
+	CommandsType cmdQueue;
+	// cmdQueue 에 명령 추가하고...
+	JsonBox::Object jsonTotalCmd;
+	cmdQueue.chunk = {(char*)malloc(1), 0, CURLE_AGAIN};
+	int i=0;
+	for(std::vector<CommandParam>::const_iterator iter = params.begin(); iter != params.end(); ++iter, i++)
+	{
+		ostringstream oss;
+		oss << (iter->param);
+		
+		char buf[20];
+		sprintf(buf, "%d", i);
+		JsonBox::Object param;
+		param["p"] = iter->param;
+		param["a"] = iter->action;
+		jsonTotalCmd[buf] = param; // dict 로
+		CommandType cmd = {iter->target, iter->selector, oss.str(), iter->action};
+		cmdQueue.commands[buf] = cmd;
+		cmdCollect.push_back(cmd);
+	}
+	ostringstream oss2;
+	oss2 << jsonTotalCmd;
+	cmdQueue.commandStr = oss2.str();
+	cmdQueue.caller = this;
+	commandQueue[insertIndex] = cmdQueue;
 	pthread_t p_thread;
 	int thr_id;
 	
@@ -216,17 +223,33 @@ bool GraphDog::command(string action, const JsonBox::Object* const param,CCObjec
 		resultobj["state"]= JsonBox::Value("error");
 		resultobj["errorMsg"]=JsonBox::Value("don't create thread");
 		resultobj["errorCode"]=JsonBox::Value(1001);
-		if(cmd.target!=0 && cmd.selector!=0)
-			((cmd.target)->*(cmd.selector))(resultobj);
-		if(cmd.chunk.memory)
-			free(cmd.chunk.memory);
 		
-		commands.erase(insertIndex);
+		for(std::vector<CommandType>::const_iterator iter = cmdCollect.begin(); iter != cmdCollect.end(); ++iter)
+		{
+			if( iter->target != 0 && iter->selector != 0)
+				((iter->target)->*(iter->selector))(resultobj);	
+		}
+		
+		if( cmdQueue.chunk.memory )
+			free(cmdQueue.chunk.memory);
+		commandQueue.erase(insertIndex);
 		return false;
 	}
-        
-		
+	
+    return true;
+}
+bool GraphDog::command(string action, const JsonBox::Object* const param,CCObject *target,GDSelType selector){
     
+	CommandParam cp;
+	cp.action = action;
+	if(param != 0)
+		cp.param = *param;
+	cp.target = target;
+	cp.selector = selector;
+	
+    std::vector<CommandParam> p;
+	p.push_back(cp);
+	this->command(p);
     return true;
 }
 
@@ -236,50 +259,37 @@ void* GraphDog::t_function(void *_insertIndex)
 	int insertIndex = (int)_insertIndex;
 //	std::map<int, CommandType>& commands = graphdog->commands;
 //	pthread_mutex_lock(&graphdog->cmdsMutex);
-	CommandType& command = graphdog->commands[insertIndex];
-		
-
+	CommandsType& command = graphdog->commandQueue[insertIndex];
 	pthread_mutex_lock(&command.caller->t_functionMutex);
-	
 	string token=GraphDog::get()->getToken();
-
-	string paramStr=GraphDogLib::base64_encode(command.paramStr.c_str(), command.paramStr.length());
-	command.commandStr=command.commandStr.append("&token=");
-	command.commandStr=command.commandStr.append(token);
-	command.commandStr=command.commandStr.append("&param=");
-	command.commandStr=command.commandStr.append(paramStr);
-	command.commandStr=command.commandStr.append("&appver=");
-	command.commandStr=command.commandStr.append(GraphDog::get()->getAppVersionString());
+	CCLog("%s", command.commandStr.c_str());
+	string paramStr=GraphDogLib::base64_encode(command.commandStr.c_str(), command.commandStr.length());
+	string dataset = "&token=" + token + "&command=" + paramStr + "&appver=" + GraphDog::get()->getAppVersionString();
 	
     string commandurl = "http://www.graphdog.net/command/";
     commandurl=commandurl.append(GraphDog::get()->getGraphDogVersion());
     commandurl=commandurl.append("/");
     commandurl=commandurl.append(GraphDog::get()->aID);
-    commandurl=commandurl.append("/");
-    commandurl=commandurl.append(command.action);
     
-	
 	// << "&param=" << paramStr
 	//curl으로 명령을 날리고 겨로가를 얻는다.
 	CURL *handle = GraphDog::get()->getCURL();
     curl_easy_setopt(handle, CURLOPT_URL, commandurl.c_str());
-	curl_easy_setopt(handle, CURLOPT_POSTFIELDS,command.commandStr.c_str());
+	curl_easy_setopt(handle, CURLOPT_POSTFIELDS,dataset.c_str());
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, (void *)&command.chunk);
 	
 	//		curl_setopt($ch,CURLOPT_TIMEOUT,1000);
 //	pthread_mutex_unlock(&graphdog->cmdsMutex);
 	CURLcode resultCode = curl_easy_perform(handle);
 	
+	//##
 	string resultStr = command.chunk.memory;// gdchunk.memory;
 	JsonBox::Object resultobj = GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
 	resultobj["resultString"]=JsonBox::Value(resultStr);
 	
 	//callbackparam
-	if(command.paramStr!=""){
-		JsonBox::Object param =  GraphDogLib::StringToJsonObject(command.paramStr);
-		resultobj["param"]=JsonBox::Value(param);
-	}
 	
+	bool newToken = false;
 	// 새토큰발급일 경우
 	if(resultobj["tokenUpdate"].getString()=="ok"){
 		//정상결과시 AuID,Token 다시 세팅
@@ -290,39 +300,73 @@ void* GraphDog::t_function(void *_insertIndex)
 		}else{
 			command.caller->setCTime("9999");
 		}
-		
 		//첫실행일경우 받아온 nick,flag 저장.
 		if(resultobj["isFirst"].getBoolean()==true){
 			command.caller->setNick(resultobj["nick"].getString());
 			command.caller->setFlag(resultobj["flag"].getString());
 		}
 		//기존명령 다시 등록
-		JsonBox::Value param;
-		param.loadFromString(command.paramStr);
-		command.caller->command(command.action, &param.getObject(), command.target, command.selector);
-		command.selector = 0;
-		command.target = 0;
+		std::vector<CommandParam> vcp;
+		for(std::map<string, CommandType>::const_iterator iter = command.commands.begin(); iter != command.commands.end(); ++iter)
+		{
+			JsonBox::Value param;
+			param.loadFromString(iter->second.paramStr);
+			vcp.push_back(CommandParam(iter->second.action, param.getObject(), iter->second.target, iter->second.selector ));
+		}
+		command.caller->command(vcp);
+		
+		for(std::map<string, CommandType>::iterator iter = command.commands.begin(); iter != command.commands.end(); ++iter)
+		{
+			iter->second.target = 0;
+			iter->second.selector = 0;
+		}
+		newToken = true;
 	}
 	
 	if(resultobj["errorcode"].getInt()==9999){
 		command.caller->setCTime("9999");
 		command.caller->errorCount++;
 		if(command.caller->errorCount<5){
-			JsonBox::Value param;
-			param.loadFromString(command.paramStr);
-			command.caller->command(command.action, &param.getObject(), command.target, command.selector);
-			command.selector = 0;
-			command.target = 0;
+			std::vector<CommandParam> vcp;
+			for(std::map<string, CommandType>::const_iterator iter = command.commands.begin(); iter != command.commands.end(); ++iter)
+			{
+				JsonBox::Value param;
+				param.loadFromString(iter->second.paramStr);
+				CommandParam cp;
+				cp.action = iter->second.action;
+				cp.param = param.getObject();
+				cp.selector = iter->second.selector;
+				cp.target = iter->second.target;
+				vcp.push_back(cp);
+			}
+			command.caller->command(vcp);
+			for(std::map<string, CommandType>::iterator iter = command.commands.begin(); iter != command.commands.end(); ++iter)
+			{
+				iter->second.target = 0;
+				iter->second.selector = 0;
+			}
 		}
+		newToken = true;
 	}
 	
-	if(resultobj["state"].getString()=="ok"){
-		command.caller->errorCount=0;
+	if(newToken == false) // 새토큰 발급이 아닌 경우.
+	{
+		for(std::map<string, CommandType>::const_iterator iter = command.commands.begin(); iter != command.commands.end(); ++iter)
+		{
+			if(iter->second.paramStr != "")
+			{
+				JsonBox::Object param =  GraphDogLib::StringToJsonObject(iter->second.paramStr);
+				resultobj["param"]=JsonBox::Value(param);
+			}
+			if(resultobj["state"].getString()=="ok"){
+				command.caller->errorCount=0;
+			}
+			command.result = resultobj;
+			command.chunk.resultCode = resultCode;
+			
+		}
+
 	}
-	command.result = resultobj;
-	command.chunk.resultCode = resultCode;
-	
-	
 	pthread_mutex_unlock(&command.caller->t_functionMutex);
 	
 	return NULL;
@@ -332,12 +376,16 @@ void GraphDog::removeCommand(cocos2d::CCObject *target)
 {
 	//GDDelegator::getInstance()->removeCommand(target);
 //	pthread_mutex_lock(&cmdsMutex);
-	for(std::map<int, CommandType>::iterator iter = commands.begin(); iter != commands.end(); ++iter)
+	for(std::map<int, CommandsType>::iterator iter = commandQueue.begin(); iter != commandQueue.end(); ++iter)
 	{
-		if(iter->second.target == target)
+		for(std::map<string, CommandType>::iterator iter2 = iter->second.commands.begin(); iter2 != iter->second.commands.end(); ++iter2)
 		{
-			iter->second.target = 0;
-			iter->second.selector = 0;
+			
+			if(iter2->second.target == target)
+			{
+				iter2->second.target = 0;
+				iter2->second.selector = 0;
+			}
 		}
 	}
 //	pthread_mutex_unlock(&cmdsMutex);
@@ -346,56 +394,66 @@ void GraphDog::removeCommand(cocos2d::CCObject *target)
 
 void GraphDog::receivedCommand(float dt)
 {
-//	pthread_mutex_lock(&cmdsMutex);
-	for(std::map<int, CommandType>::iterator iter = commands.begin(); iter != commands.end();)
+	//##
+	for(std::map<int, CommandsType>::iterator commandQueueIter = commandQueue.begin(); commandQueueIter != commandQueue.end();)
 	{
-		string resultStr = iter->second.paramStr;
-		CommandType command = iter->second;
-		
+		CommandsType commands = commandQueueIter->second;
 		try {
-			if(command.chunk.resultCode == CURLE_AGAIN || command.chunk.resultCode != CURLE_OK)
+			if(commands.chunk.resultCode == CURLE_AGAIN)
 			{
-				throw command.chunk.resultCode;
+				throw commands.chunk.resultCode;
+			}
+			else if(commands.chunk.resultCode != CURLE_OK)
+			{
+				for(std::map<string, CommandType>::iterator commandTypeIter = commandQueueIter->second.commands.begin(); commandTypeIter != commandQueueIter->second.commands.end(); ++commandTypeIter)
+				{
+					JsonBox::Object resultobj;
+					CommandType command = commandTypeIter->second;
+					resultobj["state"] = JsonBox::Value("error");
+					resultobj["errorMsg"] = JsonBox::Value("check your network state");
+					resultobj["errorCode"] = JsonBox::Value(1002);
+					
+					//callbackparam
+					if(command.paramStr!=""){
+						JsonBox::Object param =  GraphDogLib::StringToJsonObject(command.paramStr);
+						resultobj["param"]=JsonBox::Value(param);
+					}
+					if(command.target!=0 && command.selector!=0)
+						((command.target)->*(command.selector))(resultobj);
+				}
+				throw commands.chunk.resultCode;
 			}
 			
-			JsonBox::Object resultobj =  command.result; //GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
-			resultobj["resultString"]=JsonBox::Value(resultStr);
-			
-			//결과를 지정한 target,selector 으로 넘긴다.
-			if(command.target!=0 && command.selector!=0)
-				((command.target)->*(command.selector))(resultobj);
+			JsonBox::Object resultobj = commands.result; //GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
+			for(JsonBox::Object::iterator iter2 = resultobj.begin(); iter2 != resultobj.end(); ++iter2)
+			{
+				CommandType ct = commandQueueIter->second.commands[iter2->first];
+				if(ct.target != 0 && ct.selector != 0)
+				{
+					((ct.target)->*(ct.selector))(iter2->second.getObject());
+				}				
+			}
 			
 			//메모리도 해제
-			if(command.chunk.memory)
-				free(command.chunk.memory);
+			if(commands.chunk.memory)
+				free(commands.chunk.memory);
 			
 			//명령을 삭제한다.
-			commands.erase(iter++);
-			
-		} catch (const CURLcode& resultCode) {
+			commandQueue.erase(commandQueueIter++);
+		}
+		catch (const CURLcode& resultCode) {
 			if(resultCode == CURLE_AGAIN)
 			{
-				++iter;
+				++commandQueueIter;
 			}
 			else if(resultCode != CURLE_OK)
 			{
-				JsonBox::Object resultobj;
-				resultobj["state"]=JsonBox::Value("error");
-				resultobj["errorMsg"]=JsonBox::Value("check your network state");
-				resultobj["errorCode"]=JsonBox::Value(1002);
-				//callbackparam
-				if(command.paramStr!=""){
-					JsonBox::Object param =  GraphDogLib::StringToJsonObject(command.paramStr);
-					resultobj["param"]=JsonBox::Value(param);
-				}
-				if(command.target!=0 && command.selector!=0)((command.target)->*(command.selector))(resultobj);
-				commands.erase(iter++);
-				if(command.chunk.memory)
-					free(command.chunk.memory);
+				if(commands.chunk.memory)
+					free(commands.chunk.memory);
+				commandQueue.erase(commandQueueIter++);
 			}
 		}
 	}
-//	pthread_mutex_unlock(&cmdsMutex);
 }
 std::string GraphDog::getDeviceID() {
     string _id;

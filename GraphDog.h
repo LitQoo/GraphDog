@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <queue>
 #include <list>
-#define GRAPHDOG_VERSION    "1"
+#define GRAPHDOG_VERSION    "2"
 struct GDStruct {
     char *memory;
     size_t size;
@@ -29,12 +29,31 @@ struct AutoIncrease
 	static int get(){return cnt++;}
 };
 
+struct CommandParam
+{
+	string action;
+	JsonBox::Object param;
+	const CCObject* target;
+	GDSelType selector;
+	CommandParam(const string& _action, const JsonBox::Object& _param, const CCObject* _target, GDSelType _selector)
+	{
+		action = _action;
+		param = _param;
+		target = _target;
+		selector = _selector;
+	}
+	CommandParam(){}
+//	CommandParam(string a, const JsonBox::Object* p, const CCObject* t, GDSelType& s) : action(a),
+//		param(p), target(t), selector(s) {}
+};
+
 class GraphDog: public CCObject{
 public:
     //시작설정
     void setup(string appID,string secretKey,string _packageName,int _appVersion);
     //명령날리기 - 이 함수로 모든 통신을 할수있다. 쓰레드생성 실패시 false 그외 true
     bool command(string action, const JsonBox::Object* const param,CCObject *target,GDSelType selector);
+	bool command(const std::vector<CommandParam>& params);
     //닉네임저장
     void setNick(string nick);
     //플레그저장
@@ -69,20 +88,26 @@ public:
 		return _ins;
 	}
     
+	
     struct CommandType
 	{
-		CCObject* target;
+		const CCObject* target;
 		GDSelType selector;
-        string commandStr;
-        string paramStr;
+		string paramStr;
+		string action;
+	};
+	struct CommandsType
+	{
+		std::map<string, CommandType> commands; //gid, CommandType
+		string commandStr;
 		GraphDog* caller;
 		GDStruct chunk;
-		string action;
 		JsonBox::Object result;
 	};
-	std::map<int, CommandType> commands;
+	std::map<int, CommandsType> commandQueue;
     void removeCommand(cocos2d::CCObject *target);
 
+	JsonBox::Object dictParam;
 private:
 //    GDStruct gdchunk;
 	pthread_mutex_t t_functionMutex;

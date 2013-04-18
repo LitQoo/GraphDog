@@ -63,7 +63,7 @@ namespace GraphDogLib {
 
 using namespace cocos2d;
 using namespace std;
-typedef void (CCObject::*GDSelType)(JsonBox::Object);
+typedef void (CCObject::*GDSelType)(JsonBox::Object) const;
 #define gd_selector(_SELECTOR) (GDSelType)(&_SELECTOR)
 
 
