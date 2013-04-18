@@ -24,7 +24,7 @@
 #include <sys/sysctl.h>
 #endif
 
-#include "KS_Util.h"
+//#include "KS_Util.h"
 int AutoIncrease::cnt = 0;
 size_t GraphDog::WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp){
 
@@ -189,7 +189,7 @@ bool GraphDog::command(const std::vector<CommandParam>& params)
 	CommandsType cmdQueue;
 	// cmdQueue 에 명령 추가하고...
 	JsonBox::Object jsonTotalCmd;
-	cmdQueue.chunk = {(char*)malloc(1), 0, CURLE_AGAIN};
+	cmdQueue.chunk = GDStruct((char*)malloc(1), 0, CURLE_AGAIN);
 	int i=0;
 	for(std::vector<CommandParam>::const_iterator iter = params.begin(); iter != params.end(); ++iter, i++)
 	{

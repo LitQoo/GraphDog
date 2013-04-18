@@ -20,6 +20,13 @@ struct GDStruct {
     char *memory;
     size_t size;
 	CURLcode resultCode;
+	GDStruct(){}
+	GDStruct(char *t_memory, size_t t_size, CURLcode t_resultCode)
+	{
+		memory = t_memory;
+		size = t_size;
+		resultCode = t_resultCode;
+	}
 };
 
 
