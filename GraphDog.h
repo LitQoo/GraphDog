@@ -49,6 +49,15 @@ struct CommandParam
 		target = _target;
 		selector = _selector;
 	}
+	CommandParam(const string& _action, int _param, const CCObject* _target, GDSelType _selector)
+	{
+		CCAssert(_param == 0, "_param == 0");
+		action = _action;
+		JsonBox::Object _p;
+		param = _p;
+		target = _target;
+		selector = _selector;
+	}
 	CommandParam(){}
 //	CommandParam(string a, const JsonBox::Object* p, const CCObject* t, GDSelType& s) : action(a),
 //		param(p), target(t), selector(s) {}
