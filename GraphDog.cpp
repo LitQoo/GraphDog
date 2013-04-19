@@ -24,7 +24,7 @@
 #include <sys/sysctl.h>
 #endif
 
-//#include "KS_Util.h"
+
 int AutoIncrease::cnt = 0;
 size_t GraphDog::WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp){
 
@@ -59,12 +59,13 @@ string GraphDog::getGraphDogVersion(){
 }
 
 void GraphDog::setup(string appID,string secretKey,string _packageName,int _appVersion){
-	string deviceId = getDeviceID();
+	
     aID=appID;
     sKey=secretKey;
-    this->setUdid(deviceId);
+
 	this->packageName=_packageName;
-    
+    string deviceId = getDeviceID();
+	this->setUdid(deviceId);
     std::ostringstream ostr;
     ostr << _appVersion;
     this->appVersion=ostr.str();
@@ -363,10 +364,8 @@ void* GraphDog::t_function(void *_insertIndex)
 				command.caller->errorCount=0;
 			}
 			command.result = resultobj;
-			command.chunk.resultCode = resultCode;
-			
+			command.chunk.resultCode = resultCode;	
 		}
-
 	}
 	pthread_mutex_unlock(&command.caller->t_functionMutex);
 	
@@ -506,7 +505,6 @@ std::string GraphDog::getDeviceID() {
 		__minfo.classID = 0;
 		__minfo.env = 0;
 		__minfo.methodID = 0;
-		
 		if(JniHelper::getMethodInfo(__minfo, packageName.c_str(), "getUDID", "()Ljava/lang/String;"))
 		{
 			jstring jstrTitle = (jstring) __minfo.env->CallObjectMethod(jobj, __minfo.methodID);
@@ -555,7 +553,6 @@ std::string	GraphDog::getDeviceInfo()
 #elif CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
 	JniMethodInfo minfo;
 	jobject jobj;
-	
 	if(JniHelper::getStaticMethodInfo(minfo, packageName.c_str(), "getActivity", "()Ljava/lang/Object;"))
 	{
 		jobj = minfo.env->NewGlobalRef(minfo.env->CallStaticObjectMethod(minfo.classID, minfo.methodID));
@@ -579,7 +576,6 @@ std::string	GraphDog::getDeviceInfo()
 			}
 			__minfo.env->DeleteLocalRef(__minfo.classID);
 		}
-		
 		minfo.env->DeleteGlobalRef(jobj);
 		minfo.env->DeleteLocalRef(minfo.classID);
 	}
