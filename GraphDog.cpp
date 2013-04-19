@@ -24,7 +24,7 @@
 #include <sys/sysctl.h>
 #endif
 
-//#include "KS_Util.h"
+#include "KS_Util.h"
 int AutoIncrease::cnt = 0;
 size_t GraphDog::WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp){
 
@@ -262,7 +262,6 @@ void* GraphDog::t_function(void *_insertIndex)
 	CommandsType& command = graphdog->commandQueue[insertIndex];
 	pthread_mutex_lock(&command.caller->t_functionMutex);
 	string token=GraphDog::get()->getToken();
-	CCLog("%s", command.commandStr.c_str());
 	string paramStr=GraphDogLib::base64_encode(command.commandStr.c_str(), command.commandStr.length());
 	string dataset = "&token=" + token + "&command=" + paramStr + "&appver=" + GraphDog::get()->getAppVersionString();
 	
@@ -285,9 +284,16 @@ void* GraphDog::t_function(void *_insertIndex)
 	//##
 	string resultStr = command.chunk.memory;// gdchunk.memory;
 	JsonBox::Object resultobj = GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
-	resultobj["resultString"]=JsonBox::Value(resultStr);
 	
 	//callbackparam
+	for(auto iter = command.commands.begin(); iter != command.commands.end(); ++iter)
+	{
+		if(iter->second.paramStr != "")
+		{
+			JsonBox::Object param = GraphDogLib::StringToJsonObject(iter->second.paramStr);
+			resultobj[iter->first]["param"] = JsonBox::Value(param);
+		}
+	}
 	
 	bool newToken = false;
 	// 새토큰발급일 경우
@@ -353,11 +359,6 @@ void* GraphDog::t_function(void *_insertIndex)
 	{
 		for(std::map<string, CommandType>::const_iterator iter = command.commands.begin(); iter != command.commands.end(); ++iter)
 		{
-			if(iter->second.paramStr != "")
-			{
-				JsonBox::Object param =  GraphDogLib::StringToJsonObject(iter->second.paramStr);
-				resultobj["param"]=JsonBox::Value(param);
-			}
 			if(resultobj["state"].getString()=="ok"){
 				command.caller->errorCount=0;
 			}
