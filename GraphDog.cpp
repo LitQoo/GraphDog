@@ -24,7 +24,7 @@
 #include <sys/sysctl.h>
 #endif
 
-#include "KS_Util.h"
+//#include "KS_Util.h"
 int AutoIncrease::cnt = 0;
 size_t GraphDog::WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp){
 
