@@ -23,6 +23,8 @@
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #endif
+#include "BaseXX.h"
+#include "KSDes.h"
 
 
 int AutoIncrease::cnt = 0;
@@ -138,7 +140,8 @@ string GraphDog::getToken(){
     string cTime=getCTime();
     string dInfo=getDeviceInfo();
     string token=GraphDogLib::GDCreateToken(auid,udid,flag,lang,nick,email,platform,cTime,sKey,dInfo);
-	
+//	CCLog("%s", token.c_str());
+//	CCLog("%s", unBase64NextUnDes("GDSK3388", token).c_str());
     return token;
 }
 
@@ -263,7 +266,7 @@ void* GraphDog::t_function(void *_insertIndex)
 	CommandsType& command = graphdog->commandQueue[insertIndex];
 	pthread_mutex_lock(&command.caller->t_functionMutex);
 	string token=GraphDog::get()->getToken();
-	string paramStr=GraphDogLib::base64_encode(command.commandStr.c_str(), command.commandStr.length());
+	string paramStr = toBase64(command.commandStr);
 	string dataset = "&token=" + token + "&command=" + paramStr + "&appver=" + GraphDog::get()->getAppVersionString();
 	
     string commandurl = "http://www.graphdog.net/command/";
@@ -527,7 +530,7 @@ std::string GraphDog::getDeviceID() {
 	
 #endif
     //string _id = base64_decode(macAddress);
-    return GraphDogLib::base64_encode(_id.c_str(), _id.length());// _id;
+	return toBase64(_id);
 }
 std::string	GraphDog::getDeviceInfo()
 {
@@ -581,8 +584,8 @@ std::string	GraphDog::getDeviceInfo()
 	}
 	
 #endif
-	return ret;
-	return GraphDogLib::gdkeyEnc(ret, sKey);
+	return toBase64( desEncryption(sKey, ret) );
+//	return GraphDogLib::gdkeyEnc(ret, sKey);
 }
 
 GraphDog* graphdog = GraphDog::get();
