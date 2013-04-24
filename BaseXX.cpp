@@ -10,7 +10,7 @@
 #include <sstream>
 #include <vector>
 
-std::vector<char> base2To(std::string t)
+std::vector<char> base2To(const std::string& t)
 {
 	std::ostringstream oss(std::stringstream::out | std::stringstream::in | std::stringstream::binary);
     std::ostreambuf_iterator<char> out(oss);
@@ -27,7 +27,7 @@ std::vector<char> base2To(std::string t)
 	return serialVector;
 }
 
-std::vector<char> base16To(std::string t)
+std::vector<char> base16To(const std::string& t)
 {
 	std::ostringstream oss(std::stringstream::out | std::stringstream::in | std::stringstream::binary);
     std::ostreambuf_iterator<char> out(oss);
@@ -44,7 +44,7 @@ std::vector<char> base16To(std::string t)
 	return serialVector;
 }
 
-std::vector<char> base32To(std::string t)
+std::vector<char> base32To(const std::string& t)
 {
 	std::ostringstream oss(std::stringstream::out | std::stringstream::in | std::stringstream::binary);
     std::ostreambuf_iterator<char> out(oss);
@@ -61,7 +61,7 @@ std::vector<char> base32To(std::string t)
 	return serialVector;
 }
 
-std::vector<char> base64To(std::string t)
+std::vector<char> base64To(const std::string& t)
 {
 	std::ostringstream oss(std::stringstream::out | std::stringstream::in | std::stringstream::binary);
     std::ostreambuf_iterator<char> out(oss);

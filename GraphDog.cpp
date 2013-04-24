@@ -266,7 +266,7 @@ void* GraphDog::t_function(void *_insertIndex)
 	CommandsType& command = graphdog->commandQueue[insertIndex];
 	pthread_mutex_lock(&command.caller->t_functionMutex);
 	string token=GraphDog::get()->getToken();
-	string paramStr = toBase64(command.commandStr);
+	string paramStr = toBase64(desEncryption(graphdog->sKey, command.commandStr));
 	string dataset = "&token=" + token + "&command=" + paramStr + "&appver=" + GraphDog::get()->getAppVersionString();
 	
     string commandurl = "http://www.graphdog.net/command/";
@@ -287,6 +287,10 @@ void* GraphDog::t_function(void *_insertIndex)
 	
 	//##
 	string resultStr = command.chunk.memory;// gdchunk.memory;
+//	resultStr.erase(std::remove(resultStr.begin(), resultStr.end(), '\n'), resultStr.end());
+	vector<char> encText = base64To(resultStr); // unbase64
+	resultStr = desDecryption(graphdog->sKey, std::string(encText.begin(), encText.end())); // des Decryption
+	
 	JsonBox::Object resultobj = GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
 	
 	//callbackparam
@@ -415,6 +419,7 @@ void GraphDog::receivedCommand(float dt)
 					resultobj["state"] = JsonBox::Value("error");
 					resultobj["errorMsg"] = JsonBox::Value("check your network state");
 					resultobj["errorCode"] = JsonBox::Value(1002);
+					CCLog("ssiba resultCode(report me!!!) : %d", commands.chunk.resultCode);
 					
 					//callbackparam
 					if(command.paramStr!=""){
@@ -584,7 +589,8 @@ std::string	GraphDog::getDeviceInfo()
 	}
 	
 #endif
-	return toBase64( desEncryption(sKey, ret) );
+	return ret;
+//	return toBase64( desEncryption(sKey, ret) );
 //	return GraphDogLib::gdkeyEnc(ret, sKey);
 }
 

@@ -4,7 +4,7 @@
 //
 //  Created by ksoo k on 13. 4. 19..
 //
-//
+// hsnks100@gmail.com 한경수
 
 #ifndef __desTest__BaseXX__
 #define __desTest__BaseXX__
@@ -19,7 +19,7 @@
 #include <vector>
 
 template <typename T>
-std::string toBase2(T t)
+std::string toBase2(const T& t)
 {
 	std::ostringstream oss;
     std::ostreambuf_iterator<char> out(oss);
@@ -28,7 +28,7 @@ std::string toBase2(T t)
 }
 
 template <typename T>
-std::string toBase16(T t)
+std::string toBase16(const T& t)
 {
 	std::ostringstream oss;
     std::ostreambuf_iterator<char> out(oss);
@@ -37,7 +37,7 @@ std::string toBase16(T t)
 
 }
 template <typename T>
-std::string toBase32(T t)
+std::string toBase32(const T& t)
 {
 	std::ostringstream oss;
     std::ostreambuf_iterator<char> out(oss);
@@ -46,7 +46,7 @@ std::string toBase32(T t)
 
 }
 template <typename T>
-std::string toBase64(T t)
+std::string toBase64(const T& t)
 {
 	std::ostringstream oss;
     std::ostreambuf_iterator<char> out(oss);
@@ -54,10 +54,10 @@ std::string toBase64(T t)
 	return oss.str();
 }
 
-std::vector<char> base2To(std::string t); // std::string str(v.begin(), v.end())
-std::vector<char> base16To(std::string t);
-std::vector<char> base32To(std::string t);
-std::vector<char> base64To(std::string t);
+std::vector<char> base2To(const std::string& t); // std::string str(v.begin(), v.end())
+std::vector<char> base16To(const std::string& t);
+std::vector<char> base32To(const std::string& t);
+std::vector<char> base64To(const std::string& t);
 
 
 

@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <queue>
 #include <list>
-#define GRAPHDOG_VERSION    "2"
+#define GRAPHDOG_VERSION    "3"
 struct GDStruct {
     char *memory;
     size_t size;
@@ -160,7 +160,7 @@ private:
         curl_easy_setopt(curl_handle, CURLOPT_COOKIEJAR,"sessid");
 		curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 		curl_easy_setopt(curl_handle, CURLOPT_POST, true);
-		curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 10 );
+		curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 11);
 
         isLogin=false;
         errorCount=0;
