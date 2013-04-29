@@ -286,14 +286,28 @@ void* GraphDog::t_function(void *_insertIndex)
 	CURLcode resultCode = curl_easy_perform(handle);
 	
 	//##
+	JsonBox::Object resultobj;
+
 	string resultStr = command.chunk.memory;// gdchunk.memory;
-//	resultStr.erase(std::remove(resultStr.begin(), resultStr.end(), '\n'), resultStr.end());
-	vector<char> encText = base64To(resultStr); // unbase64
-	resultStr = desDecryption(graphdog->sKey, std::string(encText.begin(), encText.end())); // des Decryption
+	if(*resultStr.rbegin() == '#') // success
+	{
+		try
+		{
+			vector<char> encText = base64To(std::string(resultStr.begin(), resultStr.end() - 1) ); // unbase64
+			resultStr = desDecryption(graphdog->sKey, std::string(encText.begin(), encText.end())); // des Decryption
+			resultobj = GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
+		}
+		catch(const std::string& msg)
+		{
+			resultCode = CURLE_CHUNK_FAILED;
+		}
+	}
+	else
+	{
+		resultCode = CURLE_CHUNK_FAILED;
+	}
 	
-	JsonBox::Object resultobj = GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
-	
-	//callbackparam
+	//callbackparam 통신과 무관함. 넣어준거 그대로 피드백.
 	for(auto iter = command.commands.begin(); iter != command.commands.end(); ++iter)
 	{
 		if(iter->second.paramStr != "")
