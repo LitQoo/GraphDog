@@ -33,6 +33,7 @@ namespace GraphDogLib {
     void replaceString( std::string & strCallId, const char * pszBefore, const char * pszAfter );
     string JsonObjectToString(JsonBox::Object _obj);
     JsonBox::Object StringToJsonObject(string _str);
+	string getLocalCode();
 }
 
 using namespace cocos2d;

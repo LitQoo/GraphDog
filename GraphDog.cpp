@@ -81,6 +81,8 @@ void GraphDog::setup(string appID,string secretKey,string _packageName,int _appV
 	// in cocos2d-x 2.x
 	CCDirector::sharedDirector()->getScheduler()->scheduleSelector(schedule_selector(GraphDog::receivedCommand), this, 0.f, false, kCCRepeatForever, 0);
 #endif
+	
+	setLanguage(GraphDogLib::getLocalCode());
 }
 
 void GraphDog::setAuID(string appuserID){

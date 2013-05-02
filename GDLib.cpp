@@ -55,7 +55,27 @@ JsonBox::Object StringToJsonObject(string _str){
 }
 
 	
+string getLocalCode()
+{
+	const char* tempCode;
 	
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+	NSArray *languages = [defaults objectForKey:@"AppleLanguages"];
+	NSString *currentLanguage = [languages objectAtIndex:0];
+	
+	// get the current language code.(such as English is "en", Chinese is "zh" and so on)
+	NSDictionary* temp = [NSLocale componentsFromLocaleIdentifier:currentLanguage];
+	NSString * languageCode = [temp objectForKey:NSLocaleLanguageCode];
+	
+	tempCode = [languageCode cStringUsingEncoding:NSASCIIStringEncoding];
+	
+#elif CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
+	tempCode = getCurrentLanguageJNI();
+	
+#endif
+	return tempCode;
+}
 
     
 }
