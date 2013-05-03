@@ -3,6 +3,15 @@
 #include "BaseXX.h"
 #include "KSDes.h"
 
+#if CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
+#include "jni.h"
+#if COCOS2D_VERSION<0x00020000
+#include "android/jni/JniHelper.h"
+#include "android/jni/SystemInfoJni.h"
+#else
+#include "platform/android/jni/JniHelper.h"
+#endif
+#endif
 namespace GraphDogLib {
     
 
