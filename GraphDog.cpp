@@ -312,7 +312,7 @@ void* GraphDog::t_function(void *_insertIndex)
 	}
 	else
 	{
-		resultCode = CURLE_CHUNK_FAILED;
+		//resultCode = CURLE_CHUNK_FAILED;
 	}
 	
 	//callbackparam 통신과 무관함. 넣어준거 그대로 피드백.
@@ -387,14 +387,16 @@ void* GraphDog::t_function(void *_insertIndex)
 	
 	if(newToken == false) // 새토큰 발급이 아닌 경우.
 	{
-		for(std::map<string, CommandType>::const_iterator iter = command.commands.begin(); iter != command.commands.end(); ++iter)
-		{
-			if(resultobj["state"].getString()=="ok"){
-				command.caller->errorCount=0;
-			}
-			command.result = resultobj;
-			command.chunk.resultCode = resultCode;	
+//		for(auto iter = command.commands.begin(); iter != command.commands.end(); ++iter)
+//		{
+//			CommandType test = iter->second;
+//			CCLog("dummy");
+//		}
+		if(resultobj["state"].getString()=="ok"){
+			command.caller->errorCount=0;
 		}
+		command.result = resultobj;
+		command.chunk.resultCode = resultCode;
 	}
 	pthread_mutex_unlock(&command.caller->t_functionMutex);
 	
