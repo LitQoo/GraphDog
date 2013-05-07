@@ -161,7 +161,7 @@ private:
 		curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 		curl_easy_setopt(curl_handle, CURLOPT_POST, true);
 		curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 11);
-
+		
         isLogin=false;
         errorCount=0;
         this->gdVersion = GRAPHDOG_VERSION;

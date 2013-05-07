@@ -81,7 +81,6 @@ void GraphDog::setup(string appID,string secretKey,string _packageName,int _appV
 	// in cocos2d-x 2.x
 	CCDirector::sharedDirector()->getScheduler()->scheduleSelector(schedule_selector(GraphDog::receivedCommand), this, 0.f, false, kCCRepeatForever, 0);
 #endif
-	
 	setLanguage(GraphDogLib::getLocalCode());
 }
 
@@ -289,17 +288,24 @@ void* GraphDog::t_function(void *_insertIndex)
 	
 	//##
 	JsonBox::Object resultobj;
-
-	string resultStr = command.chunk.memory;// gdchunk.memory;
-	if(*resultStr.rbegin() == '#') // success
+	string resultStr;
+	if(resultCode == CURLE_OK)
 	{
-		try
+		resultStr = command.chunk.memory;// gdchunk.memory;
+		if(*resultStr.rbegin() == '#') // success
 		{
-			vector<char> encText = base64To(std::string(resultStr.begin(), resultStr.end() - 1) ); // unbase64
-			resultStr = desDecryption(graphdog->sKey, std::string(encText.begin(), encText.end())); // des Decryption
-			resultobj = GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
+			try
+			{
+				vector<char> encText = base64To(std::string(resultStr.begin(), resultStr.end() - 1) ); // unbase64
+				resultStr = desDecryption(graphdog->sKey, std::string(encText.begin(), encText.end())); // des Decryption
+				resultobj = GraphDogLib::StringToJsonObject(resultStr);// result.getObject();
+			}
+			catch(const std::string& msg)
+			{
+				resultCode = CURLE_CHUNK_FAILED;
+			}
 		}
-		catch(const std::string& msg)
+		else
 		{
 			resultCode = CURLE_CHUNK_FAILED;
 		}
