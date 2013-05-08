@@ -9,6 +9,7 @@
 #include "android/jni/JniHelper.h"
 #include "android/jni/SystemInfoJni.h"
 #else
+#include "platform/android/jni/Java_org_cocos2dx_lib_Cocos2dxHelper.h"
 #include "platform/android/jni/JniHelper.h"
 #endif
 #endif
