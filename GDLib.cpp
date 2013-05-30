@@ -9,9 +9,31 @@
 #include "android/jni/JniHelper.h"
 #include "android/jni/SystemInfoJni.h"
 #else
+#include "platform/android/jni/Java_org_cocos2dx_lib_Cocos2dxHelper.h"
 #include "platform/android/jni/JniHelper.h"
 #endif
 #endif
+
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+#import <UIKit/UIKit.h>
+#import <StoreKit/SKStoreProductViewController.h>
+#import "AppController.h"
+
+@interface AppController(GraphDog) <SKStoreProductViewControllerDelegate>
+-(void)productViewControllerDidFinish:(SKStoreProductViewController *)viewController;
+@end
+
+@implementation AppController(GraphDog)
+-(void)productViewControllerDidFinish:(SKStoreProductViewController *)viewController
+{
+    [viewController dismissViewControllerAnimated:YES completion:nil];
+}
+@end
+
+#endif
+
+
+
 namespace GraphDogLib {
     
 
@@ -85,6 +107,31 @@ string getLocalCode()
 #endif
 	return tempCode;
 }
+    
+    
+
+    void openAppStore(string appid){
+        
+        if(NSClassFromString(@"SKStoreProductViewController")) { // iOS6 이상인지 체크
+            AppController *appDelegate = (AppController *)[[UIApplication sharedApplication]delegate];
+
+            SKStoreProductViewController *storeViewController = [[SKStoreProductViewController alloc] init];
+            storeViewController.delegate = appDelegate;
+
+            NSDictionary *parameters = @{SKStoreProductParameterITunesItemIdentifier:[NSNumber numberWithInt:atoi(appid.c_str())]};
+            
+            [storeViewController loadProductWithParameters:parameters completionBlock:^(BOOL result, NSError *error) {
+                if (result){
+                  [appDelegate.viewController presentViewController:storeViewController animated:YES completion:nil];
+                }
+             }];
+        
+        }else{
+            NSString *urlstring = [NSString stringWithFormat:@"itms-apps://itunes.apple.com/WebObjects/MZStore.woa/wa/viewSoftware?id=%s",appid.c_str()];
+            NSURL *url = [NSURL URLWithString:urlstring];
+            [[UIApplication sharedApplication] openURL:url];
+        }
+    }
 
     
 }
