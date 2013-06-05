@@ -71,9 +71,7 @@ void GraphDog::setup(string appID,string secretKey,string _packageName,int _appV
     std::ostringstream ostr;
     ostr << _appVersion;
     this->appVersion=ostr.str();
-    
 
-    
 #if COCOS2D_VERSION<0x00020000
 	// in cocos2d-x 1.x
 	CCScheduler::sharedScheduler()->scheduleSelector(schedule_selector(GraphDog::receivedCommand), this, 0,false);
@@ -337,10 +335,10 @@ void* GraphDog::t_function(void *_insertIndex)
 			command.caller->setCTime("9999");
 		}
 		//첫실행일경우 받아온 nick,flag 저장.
-		if(resultobj["isFirst"].getBoolean()==true){
-			command.caller->setNick(resultobj["nick"].getString());
-			command.caller->setFlag(resultobj["flag"].getString());
-		}
+//		if(resultobj["isFirst"].getBoolean()==true){
+//			command.caller->setNick(resultobj["nick"].getString());
+//			command.caller->setFlag(resultobj["flag"].getString());
+//		}
 		//기존명령 다시 등록
 		std::vector<CommandParam> vcp;
 		for(std::map<string, CommandType>::const_iterator iter = command.commands.begin(); iter != command.commands.end(); ++iter)
