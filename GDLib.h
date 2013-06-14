@@ -33,6 +33,8 @@ namespace GraphDogLib {
     JsonBox::Object StringToJsonObject(string _str);
 	string getLocalCode();
     void openAppStore(string appid);
+	void openReview(string);
+	void openUpdate(string);
 }
 
 using namespace cocos2d;

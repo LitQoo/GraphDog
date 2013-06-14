@@ -88,27 +88,49 @@ JsonBox::Object StringToJsonObject(string _str){
 	
 string getLocalCode()
 {
-	const char* tempCode;
+	
 	
 #if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
-	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-	NSArray *languages = [defaults objectForKey:@"AppleLanguages"];
-	NSString *currentLanguage = [languages objectAtIndex:0];
+	{
+		const char* tempCode;
+		NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+		NSArray *languages = [defaults objectForKey:@"AppleLanguages"];
+		NSString *currentLanguage = [languages objectAtIndex:0];
+		
+		// get the current language code.(such as English is "en", Chinese is "zh" and so on)
+		NSDictionary* temp = [NSLocale componentsFromLocaleIdentifier:currentLanguage];
+		NSString * languageCode = [temp objectForKey:NSLocaleLanguageCode];
+		
+		tempCode = [languageCode cStringUsingEncoding:NSASCIIStringEncoding];
+		return tempCode;
+	}
 	
-	// get the current language code.(such as English is "en", Chinese is "zh" and so on)
-	NSDictionary* temp = [NSLocale componentsFromLocaleIdentifier:currentLanguage];
-	NSString * languageCode = [temp objectForKey:NSLocaleLanguageCode];
-	
-	tempCode = [languageCode cStringUsingEncoding:NSASCIIStringEncoding];
 	
 #elif CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID
-	tempCode = getCurrentLanguageJNI();
-	
+	{
+		string tempCode = getCurrentLanguageJNI();
+		return tempCode;
+	}
 #endif
-	return tempCode;
+	
 }
     
-    
+    void openReview(string appid)
+	{
+#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+		NSString *urlstring = [NSString stringWithFormat:@"itms-apps://itunes.apple.com/WebObjects/MZStore.woa/wa/viewContentsUserReviews?id=%s&onlyLatestVersion=true&pageNumber=0&sortOrdering=1&type=Purple+Software",appid.c_str()];
+		NSURL *url = [NSURL URLWithString:urlstring];
+		[[UIApplication sharedApplication] openURL:url];
+#endif
+	}
+	void openUpdate(string appid)
+	{
+		#if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
+		NSString *urlstring = [NSString stringWithFormat:@"itms-apps://itunes.apple.com/WebObjects/MZStore.woa/wa/viewSoftware?id=%s",appid.c_str()];
+		NSURL *url = [NSURL URLWithString:urlstring];
+		[[UIApplication sharedApplication] openURL:url];
+		#endif
+	}
 
     void openAppStore(string appid){
 #if CC_TARGET_PLATFORM == CC_PLATFORM_IOS
