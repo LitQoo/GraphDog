@@ -70,6 +70,10 @@ public:
     //명령날리기 - 이 함수로 모든 통신을 할수있다. 쓰레드생성 실패시 false 그외 true
     bool command(string action, const JsonBox::Object* const param,CCObject *target,GDSelType selector);
 	bool command(const std::vector<CommandParam>& params);
+    
+    bool test(string action, const JsonBox::Object* const param,CCObject *target, GDSelType selector, JsonBox::Object result);
+    bool test(string action, const JsonBox::Object* const param,CCObject *target, GDSelType selector, string result);
+    
     //닉네임저장
     void setNick(string nick);
     //플레그저장

@@ -257,6 +257,19 @@ bool GraphDog::command(string action, const JsonBox::Object* const param,CCObjec
     return true;
 }
 
+bool GraphDog::test(string action, const JsonBox::Object* const param,CCObject *target, GDSelType selector, JsonBox::Object result){
+    result["param"] = *param;
+    if(target!=0 && selector!=0) ((target)->*(selector))(result);
+    return true;
+}
+
+bool GraphDog::test(string action, const JsonBox::Object* const param,CCObject *target, GDSelType selector, string result){
+    JsonBox::Object resultObj = GraphDogLib::StringToJsonObject(result);
+    
+    this->test(action,param,target,selector,resultObj);
+    return true;
+}
+
 //쓰레드펑션
 void* GraphDog::t_function(void *_insertIndex)
 {	
