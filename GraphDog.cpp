@@ -360,6 +360,10 @@ void* GraphDog::t_function(void *_insertIndex)
 			iter->second.selector = 0;
 		}
 		newToken = true;
+        
+        //memory leack safe
+        command.chunk.resultCode = CURL_LAST;
+        
 	}
 	
 	if(resultobj["errorcode"].getInt()==9999){
@@ -437,6 +441,10 @@ void GraphDog::receivedCommand(float dt)
 			{
 				throw commands.chunk.resultCode;
 			}
+            else if(commands.chunk.resultCode == CURL_LAST) //memory leack safe
+            {
+                throw commands.chunk.resultCode;
+            }
 			else if(commands.chunk.resultCode != CURLE_OK)
 			{
 				for(std::map<string, CommandType>::iterator commandTypeIter = commandQueueIter->second.commands.begin(); commandTypeIter != commandQueueIter->second.commands.end(); ++commandTypeIter)
