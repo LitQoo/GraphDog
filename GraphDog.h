@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <queue>
 #include <list>
-#define GRAPHDOG_VERSION    "5"
+#define GRAPHDOG_VERSION    "6"
 #include "GDSaveData.h"
 
 struct GDStruct {

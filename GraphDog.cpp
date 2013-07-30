@@ -62,10 +62,9 @@ string GraphDog::getGraphDogVersion(){
 }
 
 void GraphDog::setup(string appID,string secretKey,string _packageName,int _appVersion){
-	
+
     aID=appID;
     sKey=secretKey;
-
 	this->packageName=_packageName;
     string deviceId = getDeviceID();
 	this->setUdid(deviceId);
