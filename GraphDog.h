@@ -16,6 +16,8 @@
 #include <queue>
 #include <list>
 #define GRAPHDOG_VERSION    "5"
+#include "GDSaveData.h"
+
 struct GDStruct {
     char *memory;
     size_t size;
@@ -153,6 +155,7 @@ private:
     void receivedCommand(float dt);
 
     GraphDog(){
+		
 		pthread_mutex_init(&t_functionMutex, NULL);
 //		pthread_mutex_init(&cmdsMutex, NULL);
 		//pthread_mutex_lock(&authMutex);
