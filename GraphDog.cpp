@@ -84,7 +84,7 @@ void GraphDog::setup(string appID,string secretKey,string _packageName,int _appV
 }
 
 void GraphDog::setAuID(string appuserID){
-	gdSaveData->setKeyValue("GRAPHDOG_AUDI", appuserID);
+	gdSaveData->setKeyValue("GRAPHDOG_AUID", appuserID);
 }
 string GraphDog::getAuID(){
 	return gdSaveData->getValue("GRAPHDOG_AUID", "");
